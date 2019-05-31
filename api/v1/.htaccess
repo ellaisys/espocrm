@@ -1,12 +1,35 @@
-RewriteEngine On
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews
+    </IfModule>
 
-# Some hosts may require you to use the `RewriteBase` directive.
-# If you need to use the `RewriteBase` directive, it should be the
-# absolute physical path to the directory that contains this htaccess file.
-#
-# RewriteBase /
+    <IfModule mod_headers.c>
+        #Always set these headers.
+        #Header always set Access-Control-Allow-Origin "*"
+        Header always set Access-Control-Allow-Methods "POST, GET, OPTIONS, DELETE, PATCH, PUT"
+        Header always set Access-Control-Max-Age "864000"
+        Header always set Access-Control-Allow-Headers "x-requested-with, content-type, origin, authorization, accept"
+        Header always set Access-Control-Allow-Credentials "true"
+    </IfModule>
 
-RewriteRule .* - [E=HTTP_ESPO_CGI_AUTH:%{HTTP:Authorization}]
+    RewriteEngine On
+	
+	# Some hosts may require you to use the `RewriteBase` directive.
+	# If you need to use the `RewriteBase` directive, it should be the
+	# absolute physical path to the directory that contains this htaccess file.
+	#
+	# RewriteBase /
 
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteRule ^ index.php [QSA,L]
+    # Redirect Trailing Slashes If Not A Folder...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)/$ /$1 [L,R=301]
+
+    # Handle Front Controller...
+    # RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [QSA,L]
+
+    # Handle Authorization Header
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+</IfModule>
