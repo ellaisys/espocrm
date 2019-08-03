@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -115,7 +115,7 @@ class Container
         $rotation = $config->get('logger.rotation', true);
 
         $log = new \Espo\Core\Utils\Log('Espo');
-        $levelCode = $log->getLevelCode($config->get('logger.level', 'WARNING'));
+        $levelCode = $log::toMonologLevel($config->get('logger.level', 'WARNING'));
 
         if ($rotation) {
             $maxFileNumber = $config->get('logger.maxFileNumber', 30);
@@ -127,7 +127,7 @@ class Container
 
         $errorHandler = new \Monolog\ErrorHandler($log);
         $errorHandler->registerExceptionHandler(null, false);
-        $errorHandler->registerErrorHandler(array(), false);
+        $errorHandler->registerErrorHandler([], false);
 
         return $log;
     }

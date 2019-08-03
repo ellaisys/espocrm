@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -78,8 +78,7 @@ Espo.define('views/admin/field-manager/fields/options', 'views/fields/array', fu
 
             data.translatedOptions = {};
             (data[this.name] || []).forEach(function (value) {
-                var valueSanitized = this.getHelper().stripTags(value);
-                var valueInternal = valueSanitized.replace(/"/g, '\\"');
+                var valueInternal = value.replace(/"/g, '\\"');
                 var translatedValue = this.$el.find('input[data-name="translatedValue"][data-value="'+valueInternal+'"]').val() || value;
 
                 translatedValue = translatedValue.toString();
@@ -91,5 +90,4 @@ Espo.define('views/admin/field-manager/fields/options', 'views/fields/array', fu
         }
 
     });
-
 });

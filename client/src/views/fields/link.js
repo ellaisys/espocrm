@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -279,17 +279,17 @@ Espo.define('views/fields/link', 'views/fields/base', function (Dep) {
                         autoSelectFirst: true,
                         noCache: true,
                         formatResult: function (suggestion) {
-                            return suggestion.name;
-                        },
+                            return this.getHelper().escapeString(suggestion.name);
+                        }.bind(this),
                         transformResult: function (response) {
                             var response = JSON.parse(response);
                             var list = [];
                             response.list.forEach(function(item) {
                                 list.push({
                                     id: item.id,
-                                    name: item.name,
+                                    name: item.name || item.id,
                                     data: item.id,
-                                    value: item.name,
+                                    value: item.name || item.id,
                                     attributes: item
                                 });
                             }, this);
@@ -315,7 +315,6 @@ Espo.define('views/fields/link', 'views/fields/base', function (Dep) {
                         $elementName.autocomplete('dispose');
                     }, this);
 
-
                     if (this.mode == 'search') {
                         var $elementOneOf = this.$el.find('input.element-one-of');
                         $elementOneOf.autocomplete({
@@ -326,17 +325,17 @@ Espo.define('views/fields/link', 'views/fields/base', function (Dep) {
                             paramName: 'q',
                             noCache: true,
                             formatResult: function (suggestion) {
-                                return suggestion.name;
-                            },
+                                return this.getHelper().escapeString(suggestion.name);
+                            }.bind(this),
                             transformResult: function (response) {
                                 var response = JSON.parse(response);
                                 var list = [];
                                 response.list.forEach(function(item) {
                                     list.push({
                                         id: item.id,
-                                        name: item.name,
+                                        name: item.name || item.id,
                                         data: item.id,
-                                        value: item.name
+                                        value: item.name || item.id,
                                     });
                                 }, this);
                                 return {
@@ -350,7 +349,6 @@ Espo.define('views/fields/link', 'views/fields/base', function (Dep) {
                         });
 
                         $elementOneOf.attr('autocomplete', 'espo-' + this.name);
-
 
                         this.once('render', function () {
                             $elementOneOf.autocomplete('dispose');
@@ -420,7 +418,7 @@ Espo.define('views/fields/link', 'views/fields/base', function (Dep) {
         addLinkOneOfHtml: function (id, name) {
             var $container = this.$el.find('.link-one-of-container');
             var $el = $('<div />').addClass('link-' + id).addClass('list-group-item');
-            $el.html(name + '&nbsp');
+            $el.html(this.getHelper().escapeString(name) + '&nbsp');
             $el.prepend('<a href="javascript:" class="pull-right" data-id="' + id + '" data-action="clearLinkOneOf"><span class="fas fa-times"></a>');
             $container.append($el);
 

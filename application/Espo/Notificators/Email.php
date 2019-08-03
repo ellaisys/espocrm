@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,7 +62,7 @@ class Email extends \Espo\Core\Notificators\Base
             return;
         }
 
-        if ($entity->get('isJustSent')) {
+        if (!empty($options['isJustSent'])) {
             $previousUserIdList = [];
         } else {
             $previousUserIdList = $entity->getFetched('usersIds');
@@ -145,7 +145,7 @@ class Email extends \Espo\Core\Notificators\Base
             if ($userIdFrom === $userId) continue;
             if ($entity->getLinkMultipleColumn('users', 'inTrash', $userId)) continue;
 
-            if (!empty($options['isBeingImported'])) {
+            if (!empty($options['isBeingImported']) || !empty($options['isJustSent'])) {
                 $folderId = $entity->getLinkMultipleColumn('users', 'folderId', $userId);
                 if ($folderId) {
                     if (

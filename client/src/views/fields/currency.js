@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -170,7 +170,7 @@ Espo.define('views/fields/currency', 'views/fields/float', function (Dep) {
             if (this.mode == 'edit') {
                 this.$currency = this.$el.find('[data-name="' + this.currencyFieldName + '"]');
                 this.$currency.on('change', function () {
-                    this.model.set(this.currencyFieldName, this.$currency.val());
+                    this.model.set(this.currencyFieldName, this.$currency.val(), {ui: true});
                 }.bind(this));
             }
         },

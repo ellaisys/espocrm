@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -86,6 +86,8 @@ Espo.define('views/template/fields/variables', 'views/fields/base', function (De
                     this.getMetadata().get(['entityAcl', entityType, 'fields', field, 'internal'])
                     ||
                     this.getMetadata().get(['entityDefs', entityType, 'fields', field, 'disabled'])
+                    ||
+                    this.getMetadata().get(['entityDefs', entityType, 'fields', field, 'directAccessDisabled'])
                 ) ignoreFieldList.push(field);
             }, this);
 
@@ -149,6 +151,8 @@ Espo.define('views/template/fields/variables', 'views/fields/base', function (De
                 var scope = links[link].entity;
                 if (!scope) return;
 
+                if (links[link].disabled) return;
+
                 if (
                     this.getMetadata().get(['entityAcl', entityType, 'links', link, 'onlyAdmin'])
                     ||
@@ -169,6 +173,8 @@ Espo.define('views/template/fields/variables', 'views/fields/base', function (De
                         this.getMetadata().get(['entityAcl', scope, 'fields', field, 'internal'])
                         ||
                         this.getMetadata().get(['entityDefs', scope, 'fields', field, 'disabled'])
+                        ||
+                        this.getMetadata().get(['entityDefs', scope, 'fields', field, 'directAccessDisabled'])
                     ) ignoreFieldList.push(field);
                 }, this);
 
@@ -283,7 +289,9 @@ Espo.define('views/template/fields/variables', 'views/fields/base', function (De
 
         afterRender: function () {
             Dep.prototype.afterRender.call(this);
-        }
+        },
+
+        fetch: function () {},
 
     });
 

@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,25 +31,47 @@ namespace Espo\Core\Utils\Database\Orm\Fields;
 
 class Email extends Base
 {
-    protected function load($fieldName, $entityName)
+    protected function load($fieldName, $entityType)
     {
-        return array(
-            $entityName => array(
-                'fields' => array(
-                    $fieldName => array(
+        $foreignJoinAlias = "{$fieldName}{$entityType}Foreign";
+        $foreignJoinMiddleAlias = "{$fieldName}{$entityType}ForeignMiddle";
+
+        return [
+            $entityType => [
+                'fields' => [
+                    $fieldName => [
                         'select' => [
                             'sql' => 'emailAddresses.name',
                             'leftJoins' => [['emailAddresses', 'emailAddresses', ['primary' => 1]]],
                         ],
+                        'selectForeign' => [
+                            'sql' => "{$foreignJoinAlias}.name",
+                            'leftJoins' => [
+                                [
+                                    'EntityEmailAddress',
+                                    $foreignJoinMiddleAlias,
+                                    [
+                                        "{$foreignJoinMiddleAlias}.entityId:" => "{alias}.id",
+                                        "{$foreignJoinMiddleAlias}.primary" => 1,
+                                    ]
+                                ],
+                                [
+                                    'EmailAddress',
+                                    $foreignJoinAlias,
+                                    [
+                                        "{$foreignJoinAlias}.id:" => "{$foreignJoinMiddleAlias}.emailAddressId",
+                                    ]
+                                ]
+                            ],
+                        ],
                         'fieldType' => 'email',
-                        'where' =>
-                        array (
-                            'LIKE' => \Espo\Core\Utils\Util::toUnderScore($entityName) . ".id IN (
+                        'where' => [
+                            'LIKE' => \Espo\Core\Utils\Util::toUnderScore($entityType) . ".id IN (
                                 SELECT entity_id
                                 FROM entity_email_address
                                 JOIN email_address ON email_address.id = entity_email_address.email_address_id
                                 WHERE
-                                    entity_email_address.deleted = 0 AND entity_email_address.entity_type = '{$entityName}' AND
+                                    entity_email_address.deleted = 0 AND entity_email_address.entity_type = '{$entityType}' AND
                                     email_address.deleted = 0 AND email_address.lower LIKE {value}
                             )",
                             '=' => array(
@@ -82,31 +104,34 @@ class Email extends Base
                                 'sql' => 'emailAddressesMultiple.lower IS NOT NULL',
                                 'distinct' => true
                             )
-                        ),
+                        ],
                         'orderBy' => [
                             'sql' => 'emailAddresses.lower {direction}',
                             'leftJoins' => [['emailAddresses', 'emailAddresses', ['primary' => 1]]],
                         ],
-                    ),
-                    $fieldName .'Data' => array(
+                    ],
+                    $fieldName .'Data' => [
                         'type' => 'text',
-                        'notStorable' => true
-                    ),
-                    $fieldName .'IsOptedOut' => array(
+                        'notStorable' => true,
+                        'notExportable' => true,
+                    ],
+                    $fieldName .'IsOptedOut' => [
                         'type' => 'bool',
                         'notStorable' => true,
                         'select' => 'emailAddresses.opt_out',
                         'where' => [
                             '= TRUE' => [
-                                'sql' => 'emailAddresses.opt_out = true AND emailAddresses.opt_out IS NOT NULL'
+                                'sql' => 'emailAddresses.opt_out = true AND emailAddresses.opt_out IS NOT NULL',
+                                'leftJoins' => [['emailAddresses', 'emailAddresses', ['primary' => 1]]],
                             ],
                             '= FALSE' => [
-                                'sql' => 'emailAddresses.opt_out = false OR emailAddresses.opt_out IS NULL'
+                                'sql' => 'emailAddresses.opt_out = false OR emailAddresses.opt_out IS NULL',
+                                'leftJoins' => [['emailAddresses', 'emailAddresses', ['primary' => 1]]],
                             ]
                         ],
                         'orderBy' => 'emailAddresses.opt_out {direction}'
-                    )
-                ),
+                    ]
+                ],
                 'relations' => [
                     'emailAddresses' => [
                         'type' => 'manyMany',
@@ -117,7 +142,7 @@ class Email extends Base
                             'emailAddressId'
                         ],
                         'conditions' => [
-                            'entityType' => $entityName
+                            'entityType' => $entityType
                         ],
                         'additionalColumns' => [
                             'entityType' => [
@@ -131,7 +156,7 @@ class Email extends Base
                         ]
                     ]
                 ]
-            )
-        );
+            ]
+        ];
     }
 }

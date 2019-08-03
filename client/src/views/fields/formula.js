@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -106,6 +106,12 @@ Espo.define('views/fields/formula', 'views/fields/text', function (Dep) {
                 editor.setOptions({
                     maxLines: this.mode === 'edit' ? this.maxLineEditCount : this.maxLineDetailCount
                 });
+
+                if (this.isEditMode()) {
+                    editor.getSession().on('change', function () {
+                        this.trigger('change', {ui: true});
+                    }.bind(this));
+                }
 
                 if (this.isReadMode()) {
                     editor.setReadOnly(true);

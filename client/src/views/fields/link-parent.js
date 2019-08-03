@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -75,7 +75,8 @@ Espo.define('views/fields/link-parent', 'views/fields/base', function (Dep) {
                 foreignScope: this.foreignScope,
                 foreignScopeList: this.foreignScopeList,
                 valueIsSet: this.model.has(this.idName) || this.model.has(this.typeName),
-                iconHtml: iconHtml
+                iconHtml: iconHtml,
+                displayEntityType: this.displayEntityType && this.model.get(this.typeName),
             }, Dep.prototype.data.call(this));
         },
 
@@ -268,17 +269,17 @@ Espo.define('views/fields/link-parent', 'views/fields/base', function (Dep) {
                         noCache: true,
                         triggerSelectOnValidInput: false,
                         formatResult: function (suggestion) {
-                            return suggestion.name;
-                        },
+                            return this.getHelper().escapeString(suggestion.name);
+                        }.bind(this),
                         transformResult: function (response) {
                             var response = JSON.parse(response);
                             var list = [];
                             response.list.forEach(function(item) {
                                 list.push({
                                     id: item.id,
-                                    name: item.name,
+                                    name: item.name || item.id,
                                     data: item.id,
-                                    value: item.name,
+                                    value: item.name || item.id,
                                     attributes: item
                                 });
                             }, this);

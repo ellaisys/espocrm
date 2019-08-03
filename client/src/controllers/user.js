@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@
  * these Appropriate Legal Notices must retain the display of the "EspoCRM" word.
  ************************************************************************/
 
-Espo.define('controllers/user', 'controllers/record', function (Dep) {
+define('controllers/user', 'controllers/record', function (Dep) {
 
     return Dep.extend({
 
@@ -38,7 +38,12 @@ Espo.define('controllers/user', 'controllers/record', function (Dep) {
             }, context, usePreviouslyFetched);
         },
 
-        createViewView: function (options, model) {
+        createViewView: function (options, model, view) {
+            if (model.get('deleted')) {
+                view = 'views/deleted-detail';
+                Dep.prototype.createViewView.call(this, options, model, view);
+                return;
+            }
             if (model.isPortal()) {
                 this.getRouter().dispatch('PortalUser', 'view', {id: model.id, model: model});
                 return;
@@ -47,7 +52,7 @@ Espo.define('controllers/user', 'controllers/record', function (Dep) {
                 this.getRouter().dispatch('ApiUser', 'view', {id: model.id, model: model});
                 return;
             }
-            Dep.prototype.createViewView.call(this, options, model);
+            Dep.prototype.createViewView.call(this, options, model, view);
         }
 
     });

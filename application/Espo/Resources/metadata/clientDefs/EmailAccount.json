@@ -8,6 +8,7 @@
     "views": {
     	"list": "views/email-account/list"
     },
+    "inlineEditDisabled": true,
     "searchPanelDisabled": true,
     "formDependency": {
         "storeSentEmails": {
@@ -33,6 +34,29 @@
                     "fields": ["sentFolder"]
                 }
             ]
+        }
+    },
+    "dynamicLogic": {
+        "fields": {
+            "smtpUsername": {
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "and",
+                            "value": [
+                                {
+                                    "type": "isTrue",
+                                    "attribute": "useImap"
+                                },
+                                {
+                                    "type": "isTrue",
+                                    "attribute": "smtpAuth"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
         }
     },
     "relationshipPanels": {

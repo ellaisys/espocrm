@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@
  * these Appropriate Legal Notices must retain the display of the "EspoCRM" word.
  ************************************************************************/
 
-Espo.define('views/main', 'view', function (Dep) {
+define('views/main', 'view', function (Dep) {
 
     return Dep.extend({
 
@@ -56,6 +56,20 @@ Espo.define('views/main', 'view', function (Dep) {
 
             ['buttons', 'actions', 'dropdown'].forEach(function (type) {
                 this.menu[type] = this.menu[type] || [];
+
+                var itemList = this.menu[type];
+                itemList.forEach(function (item) {
+                    var viewObject = this;
+                    if (item.initFunction && item.data.handler) {
+                        this.wait(new Promise(function (resolve) {
+                            require(item.data.handler, function (Handler) {
+                                var handler = new Handler(viewObject);
+                                handler[item.initFunction].call(handler);
+                                resolve();
+                            });
+                        }));
+                    }
+                }, this);
             }, this);
 
             this.updateLastUrl();
@@ -74,6 +88,9 @@ Espo.define('views/main', 'view', function (Dep) {
                 ['buttons', 'actions', 'dropdown'].forEach(function (type) {
                     (this.menu[type] || []).forEach(function (item) {
                         menu[type] = menu[type] || [];
+                        if (item.configCheck) {
+                            if (!this.getConfig().getByPath(item.configCheck.split('.'))) return;
+                        }
                         if (Espo.Utils.checkActionAccess(this.getAcl(), this.model || this.scope, item)) {
                             menu[type].push(item);
                         }

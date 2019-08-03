@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -73,8 +73,9 @@ class Email extends \Espo\Core\ORM\Repositories\RDB
 
     protected function addUserByEmailAddressId(Entity $entity, $emailAddressId, $addAssignedUser = false)
     {
-        $user = $this->getEntityManager()->getRepository('EmailAddress')->getEntityByAddressId($emailAddressId, 'User', true);
-        if ($user) {
+        $userList = $this->getEntityManager()->getRepository('EmailAddress')->getEntityListByAddressId($emailAddressId, null, 'User', true);
+
+        foreach ($userList as $user) {
             $entity->addLinkMultipleId('users', $user->id);
             if ($addAssignedUser) {
                 $entity->addLinkMultipleId('assignedUsers', $user->id);
@@ -282,7 +283,7 @@ class Email extends \Espo\Core\ORM\Repositories\RDB
             $this->fillAccount($entity);
         }
 
-        if (!empty($options['isBeingImported'])) {
+        if (!empty($options['isBeingImported']) || !empty($options['isJustSent'])) {
             if (!$entity->has('from')) {
                 $this->loadFromField($entity);
             }
@@ -326,6 +327,10 @@ class Email extends \Espo\Core\ORM\Repositories\RDB
     public function applyUsersFilters(Entity $entity)
     {
         foreach ($entity->getLinkMultipleIdList('users') as $userId) {
+            if ($entity->get('status') === 'Sent') {
+                if ($entity->get('sentById') && $entity->get('sentById') === $userId) continue;
+            }
+
             $filter = $this->getEmailFilterManager()->getMatchingFilter($entity, $userId);
             if ($filter) {
                 $action = $filter->get('action');

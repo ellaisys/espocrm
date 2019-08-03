@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -94,7 +94,7 @@ class Campaign extends \Espo\Services\Record
             'campaignId' => $entity->id,
             'action' => 'Opted In',
             'isTest' => false
-        ])->groupBy(['parentId', 'parentType'])->count();
+        ])->count();
         if (!$optedInCount) $optedInCount = null;
         $entity->set('optedInCount', $optedInCount);
 
@@ -102,7 +102,7 @@ class Campaign extends \Espo\Services\Record
             'campaignId' => $entity->id,
             'action' => 'Opted Out',
             'isTest' => false
-        ])->groupBy(['parentId', 'parentType'])->count();
+        ])->count();
         $entity->set('optedOutCount', $optedOutCount);
 
         $optedOutPercentage = null;

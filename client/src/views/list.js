@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@
  * these Appropriate Legal Notices must retain the display of the "EspoCRM" word.
  ************************************************************************/
 
-Espo.define('views/list', ['views/main', 'search-manager'], function (Dep, SearchManager) {
+define('views/list', ['views/main', 'search-manager'], function (Dep, SearchManager) {
 
     return Dep.extend({
 
@@ -76,8 +76,14 @@ Espo.define('views/list', ['views/main', 'search-manager'], function (Dep, Searc
 
             this.setViewMode(this.viewMode);
 
-            if (this.getMetadata().get('clientDefs.' + this.scope + '.searchPanelDisabled')) {
+            if (this.getMetadata().get(['clientDefs', this.scope, 'searchPanelDisabled'])) {
                 this.searchPanel = false;
+            }
+
+            if (this.getUser().isPortal()) {
+                if (this.getMetadata().get(['clientDefs', this.scope, 'searchPanelInPortalDisabled'])) {
+                    this.searchPanel = false;
+                }
             }
 
             if (this.getMetadata().get(['clientDefs', this.scope, 'createDisabled'])) {
@@ -162,8 +168,8 @@ Espo.define('views/list', ['views/main', 'search-manager'], function (Dep, Searc
             if (this.quickCreate) {
                 this.menu.buttons.unshift({
                     action: 'quickCreate',
-                    label: 'Create ' + this.scope,
-                    style: 'primary',
+                    html: '<span class="fas fa-plus fa-sm"></span> ' + this.translate('Create ' +  this.scope, 'labels', this.scope),
+                    style: 'default',
                     acl: 'create',
                     aclScope: this.entityType || this.scope
                 });
@@ -171,8 +177,8 @@ Espo.define('views/list', ['views/main', 'search-manager'], function (Dep, Searc
                 this.menu.buttons.unshift({
                     link: '#' + this.scope + '/create',
                     action: 'create',
-                    label: 'Create ' +  this.scope,
-                    style: 'primary',
+                    html: '<span class="fas fa-plus fa-sm"></span> ' + this.translate('Create ' +  this.scope,  'labels', this.scope),
+                    style: 'default',
                     acl: 'create',
                     aclScope: this.entityType || this.scope
                 });
@@ -186,7 +192,8 @@ Espo.define('views/list', ['views/main', 'search-manager'], function (Dep, Searc
                 searchManager: this.searchManager,
                 scope: this.scope,
                 viewMode: this.viewMode,
-                viewModeList: this.viewModeList
+                viewModeList: this.viewModeList,
+                isWide: true,
             }, function (view) {
                 this.listenTo(view, 'reset', function () {
                     this.resetSorting();

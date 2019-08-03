@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@
  * these Appropriate Legal Notices must retain the display of the "EspoCRM" word.
  ************************************************************************/
 
-Espo.define('crm:views/dashlets/sales-pipeline', 'crm:views/dashlets/abstract/chart', function (Dep) {
+define('crm:views/dashlets/sales-pipeline', 'crm:views/dashlets/abstract/chart', function (Dep) {
 
     return Dep.extend({
 
@@ -50,10 +50,17 @@ Espo.define('crm:views/dashlets/sales-pipeline', 'crm:views/dashlets/abstract/ch
             return url;
         },
 
+        isNoData: function () {
+            return this.isEmpty;
+        },
+
         prepareData: function (response) {
             var d = [];
 
+            this.isEmpty = true;
+
             response.dataList.forEach(function (item) {
+                if (item.value) this.isEmpty = false;
                 d.push({
                     stageTranslated: this.getLanguage().translateOption(item.stage, 'stage', 'Opportunity'),
                     value: item.value,
@@ -136,7 +143,7 @@ Espo.define('crm:views/dashlets/sales-pipeline', 'crm:views/dashlets/abstract/ch
                         }
 
                         if (value % 1 == 0) {
-                            return self.currencySymbol + self.formatNumber(Math.floor(value)).toString();
+                            return self.currencySymbol + self.formatNumber(Math.floor(value), false, true).toString();
                         }
                         return '';
                     }
@@ -156,7 +163,7 @@ Espo.define('crm:views/dashlets/sales-pipeline', 'crm:views/dashlets/abstract/ch
                         }
                         var label = self.chartData[parseInt(obj.x)].label;
                         var label = (label || self.translate('None'));
-                        return label  + ':<br>' + self.currencySymbol + self.formatNumber(obj.y, true);
+                        return label  + '<br>' + self.currencySymbol + self.formatNumber(obj.y, true);
                     }
                 },
                 legend: {

@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,13 +62,6 @@ class Metadata
     );
 
     private $moduleList = null;
-
-    protected $frontendHiddenPathList = [
-        ['app', 'formula', 'functionClassNameMap'],
-        ['app', 'fileStorage', 'implementationClassNameMap'],
-        ['app', 'emailNotifications', 'handlerClassNameMap'],
-        ['app', 'client'],
-    ];
 
     /**
      * Default module order
@@ -276,31 +269,45 @@ class Metadata
     {
         $data = $this->getAllObjects();
 
-        foreach ($this->frontendHiddenPathList as $row) {
-            $p =& $data;
-            $path = [&$p];
-            foreach ($row as $i => $item) {
-                if (is_array($item)) break;
-                if (!property_exists($p, $item)) break;
-                if ($i == count($row) - 1) {
-                    unset($p->$item);
-                    $o =& $p;
-                    for ($j = $i - 1; $j > 0; $j--) {
-                        if (is_object($o) && !count(get_object_vars($o))) {
-                            $o =& $path[$j];
-                            $k = $row[$j];
-                            unset($o->$k);
-                        } else {
-                            break;
-                        }
-                    }
-                } else {
-                    $p =& $p->$item;
-                    $path[] = &$p;
-                }
-            }
+        $frontendHiddenPathList = $this->get(['app', 'metadata', 'frontendHiddenPathList'], []);
+
+        foreach ($frontendHiddenPathList as $row) {
+            $this->removeDataByPath($row, $data);
         }
         return $data;
+    }
+
+    private function removeDataByPath($row, &$data)
+    {
+        $p = &$data;
+        $path = [&$p];
+
+        foreach ($row as $i => $item) {
+            if (is_array($item)) break;
+            if ($item === '__ANY__') {
+                foreach (get_object_vars($p) as &$v) {
+                    $this->removeDataByPath(array_slice($row, $i + 1), $v);
+                }
+                return;
+            }
+            if (!property_exists($p, $item)) break;
+            if ($i == count($row) - 1) {
+                unset($p->$item);
+                $o = &$p;
+                for ($j = $i - 1; $j > 0; $j--) {
+                    if (is_object($o) && !count(get_object_vars($o))) {
+                        $o = &$path[$j];
+                        $k = $row[$j];
+                        unset($o->$k);
+                    } else {
+                        break;
+                    }
+                }
+            } else {
+                $p = &$p->$item;
+                $path[] = &$p;
+            }
+        }
     }
 
     protected function addAdditionalFieldsObj($data)
@@ -453,7 +460,7 @@ class Metadata
                         $fieldName = $matches[1];
                         $fieldPath = [$key1, $key2, 'fields', $fieldName];
 
-                        $additionalFields = $this->getMetadataHelper()->getAdditionalFieldList($fieldName, $this->get($fieldPath), $fieldDefinitionList);
+                        $additionalFields = $this->getMetadataHelper()->getAdditionalFieldList($fieldName, $this->get($fieldPath, []), $fieldDefinitionList);
                         if (is_array($additionalFields)) {
                             foreach ($additionalFields as $additionalFieldName => $additionalFieldParams) {
                                 $unsets[] = 'fields.' . $additionalFieldName;

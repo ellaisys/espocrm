@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -71,21 +71,24 @@ class Settings extends \Espo\Core\Services\Base
 
         $ignoreItemList = [];
 
-        $systemOnlyItemList = $this->getSystemOnlyItemList();
-        foreach ($systemOnlyItemList as $item) {
+        foreach ($this->getSystemOnlyItemList() as $item) {
             $ignoreItemList[] = $item;
         }
 
         if (!$this->getUser()->isAdmin() || $this->getUser()->isSystem()) {
-            $adminOnlyItemList = $this->getAdminOnlyItemList();
-            foreach ($adminOnlyItemList as $item) {
+            foreach ($this->getAdminOnlyItemList() as $item) {
                 $ignoreItemList[] = $item;
             }
         }
 
         if ($this->getUser()->isSystem()) {
-            $userOnlyItemList = $this->getUserOnlyItemList();
-            foreach ($userOnlyItemList as $item) {
+            foreach ($this->getUserOnlyItemList() as $item) {
+                $ignoreItemList[] = $item;
+            }
+        }
+
+        if ($this->getConfig()->get('restrictedMode') && !$this->getUser()->isSuperAdmin()) {
+            foreach ($this->getConfig()->getSuperAdminOnlySystemItemList() as $item) {
                 $ignoreItemList[] = $item;
             }
         }
@@ -97,6 +100,15 @@ class Settings extends \Espo\Core\Services\Base
 
         foreach ($ignoreItemList as $item) {
             unset($data->$item);
+        }
+
+        if ($this->getUser()->isSystem()) {
+            $globalItemList = $this->getGlobalItemList();
+            foreach (get_object_vars($data) as $item => $value) {
+                if (!in_array($item, $globalItemList)) {
+                    unset($data->$item);
+                }
+            }
         }
 
         $fieldDefs = $this->getMetadata()->get(['entityDefs', 'Settings', 'fields']);
@@ -120,14 +132,15 @@ class Settings extends \Espo\Core\Services\Base
 
         $ignoreItemList = [];
 
-        $systemOnlyItemList = $this->getSystemOnlyItemList();
-        foreach ($systemOnlyItemList as $item) {
+        foreach ($this->getSystemOnlyItemList() as $item) {
             $ignoreItemList[] = $item;
         }
 
         if ($this->getConfig()->get('restrictedMode') && !$this->getUser()->isSuperAdmin()) {
-            $superAdminOnlyItemList = $this->getConfig()->getSuperAdminOnlyItemList();
-            foreach ($superAdminOnlyItemList as $item) {
+            foreach ($this->getConfig()->getSuperAdminOnlyItemList() as $item) {
+                $ignoreItemList[] = $item;
+            }
+            foreach ($this->getConfig()->getSuperAdminOnlySystemItemList() as $item) {
                 $ignoreItemList[] = $item;
             }
         }
@@ -161,6 +174,10 @@ class Settings extends \Espo\Core\Services\Base
 
     protected function filterData($data)
     {
+        if (empty($data->useWebSocket)) {
+            unset($data->webSocketUrl);
+        }
+
         if ($this->getUser()->isSystem()) return;
 
         if ($this->getUser()->isAdmin()) return;
@@ -215,6 +232,22 @@ class Settings extends \Espo\Core\Services\Base
         $fieldDefs = $this->getMetadata()->get(['entityDefs', 'Settings', 'fields']);
         foreach ($fieldDefs as $field => $fieldParams) {
             if (!empty($fieldParams['onlySystem'])) {
+                foreach ($this->getFieldManagerUtil()->getAttributeList('Settings', $field) as $attribute) {
+                    $itemList[] = $attribute;
+                }
+            }
+        }
+
+        return $itemList;
+    }
+
+    public function getGlobalItemList()
+    {
+        $itemList = $this->getConfig()->get('globalItems', []);
+
+        $fieldDefs = $this->getMetadata()->get(['entityDefs', 'Settings', 'fields']);
+        foreach ($fieldDefs as $field => $fieldParams) {
+            if (!empty($fieldParams['global'])) {
                 foreach ($this->getFieldManagerUtil()->getAttributeList('Settings', $field) as $attribute) {
                     $itemList[] = $attribute;
                 }

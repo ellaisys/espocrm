@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -78,6 +78,10 @@ Espo.define('crm:views/campaign/record/panels/campaign-log-records', 'views/reco
                 layoutName: 'createFromCampaignLog'
             }, function (view) {
                 view.render();
+                var recordView = view.getView('edit');
+                if (recordView) {
+                    recordView.setFieldRequired('includingActionList');
+                }
                 this.listenToOnce(view, 'after:save', function () {
                     Espo.Ui.success(this.translate('Done'));
                 }, this);
@@ -86,5 +90,3 @@ Espo.define('crm:views/campaign/record/panels/campaign-log-records', 'views/reco
 
     });
 });
-
-

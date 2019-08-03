@@ -38,6 +38,8 @@
         "Currency": "Currency",
         "Integrations": "Integrations",
         "Extensions": "Extensions",
+        "Webhooks": "Webhooks",
+        "Dashboard Templates": "Dashboard Templates",
         "Upload": "Upload",
         "Installing...": "Installing...",
         "Upgrading...": "Upgrading...",
@@ -63,6 +65,7 @@
         "Lead Capture": "Lead Capture",
         "Attachments": "Attachments",
         "System Requirements": "System Requirements",
+        "PDF Templates": "PDF Templates",
         "PHP Settings": "PHP Settings",
         "Database Settings": "Database Settings",
         "Permissions": "Permissions",
@@ -182,7 +185,8 @@
         "inlineEditDisabled": "Disable Inline Edit",
         "allowCustomOptions": "Allow Custom Options",
         "displayAsLabel": "Display as Label",
-        "maxCount": "Max Item Count"
+        "maxCount": "Max Item Count",
+        "displayRawText": "Display raw text (no markdown)"
     },
     "messages": {
         "upgradeVersion": "EspoCRM will be upgraded to version <strong>{version}</strong>. Please be patient as this may take a while.",
@@ -200,11 +204,14 @@
         "cronIsNotConfigured": "Scheduled jobs are not running.  Hence inbound emails, notifications and reminders are not working. Please follow the [instructions](https://www.espocrm.com/documentation/administration/server-configuration/#user-content-setup-a-crontab) to setup cron job.",
         "newVersionIsAvailable": "New EspoCRM version {latestVersion} is available.",
         "newExtensionVersionIsAvailable": "New {extensionName} version {latestVersion} is available.",
-        "uninstallConfirmation": "Are you sure you want to uninstall the extension?"
+        "uninstallConfirmation": "Are you sure you want to uninstall the extension?",
+        "upgradeInfo": "Check the <a href=\"{url}\">documentation</a> about how to upgrade your EspoCRM instance.",
+        "upgradeRecommendation": "This way of upgrading is not recommended. It's better to upgrade from CLI."
     },
     "descriptions": {
         "settings": "System settings of application.",
         "scheduledJob": "Jobs which are executed by cron.",
+        "jobs": "Jobs execute tasks in the background.",
         "upgrade": "Upgrade EspoCRM.",
         "clearCache": "Clear all backend cache.",
         "rebuild": "Rebuild backend and clear cache.",
@@ -237,7 +244,10 @@
         "leadCapture": "API entry points for Web-to-Lead.",
         "attachments": "All file attachments stored in the system.",
         "systemRequirements": "System Requirements for EspoCRM.",
-        "apiUsers": "Separate users for integration purposes."
+        "apiUsers": "Separate users for integration purposes.",
+        "webhooks": "Manage webhooks.",
+        "dashboardTemplates": "Deploy dashboards to users.",
+        "pdfTemplates": "Templates for printing to PDF."
     },
     "options": {
         "previewSize": {

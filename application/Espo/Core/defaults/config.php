@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -179,5 +179,6 @@ return [
     'noteEditThresholdPeriod' => '7 days',
     'emailForceUseExternalClient' => false,
     'useWebSocket' => false,
-    'isInstalled' => false
+    'auth2FAMethodList' => ['Totp'],
+    'isInstalled' => false,
 ];

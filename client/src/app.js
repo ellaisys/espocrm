@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -526,7 +526,8 @@ define(
             this.unsetCookieAuth();
 
             xhr = new XMLHttpRequest;
-            xhr.open('GET', this.url + '/');
+
+            xhr.open('GET', this.basePath + this.url + '/');
             xhr.setRequestHeader('Authorization', 'Basic ' + Base64.encode('**logout:logout'));
             xhr.send('');
             xhr.abort();
@@ -676,6 +677,11 @@ define(
                             msg += ': ' + self.language.translate('Access denied');
                             Espo.Ui.error(msg);
                         }
+                        break;
+                    case 400:
+                        var msg = self.language.translate('Error') + ' ' + xhr.status;
+                        msg += ': ' + self.language.translate('Bad request');
+                        Espo.Ui.error(msg);
                         break;
                     case 404:
                         if (options.main) {

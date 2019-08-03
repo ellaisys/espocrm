@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -99,7 +99,7 @@ class Application
         exit;
     }
 
-    public function runEntryPoint($entryPoint, $data = array(), $final = false)
+    public function runEntryPoint($entryPoint, $data = [], $final = false)
     {
         if (empty($entryPoint)) {
             throw new \Error();
@@ -133,7 +133,9 @@ class Application
 
             $slim->run();
         } catch (\Exception $e) {
-            $container->get('output')->processError($e->getMessage(), $e->getCode(), true, $e);
+            try {
+                $container->get('output')->processError($e->getMessage(), $e->getCode(), true, $e);
+            } catch (\Slim\Exception\Stop $e) {}
         }
     }
 
@@ -215,6 +217,9 @@ class Application
 
     public function runCommand(string $command)
     {
+        $auth = $this->createAuth();
+        $auth->useNoAuth();
+
         $consoleCommandManager = $this->getContainer()->get('consoleCommandManager');
         return $consoleCommandManager->run($command);
     }
@@ -259,7 +264,7 @@ class Application
             }
 
             $routeOptions = call_user_func($route->getCallable());
-            $routeKeys = is_array($routeOptions) ? array_keys($routeOptions) : array();
+            $routeKeys = is_array($routeOptions) ? array_keys($routeOptions) : [];
 
             if (!in_array('controller', $routeKeys, true)) {
                 return $container->get('output')->render($routeOptions);
@@ -325,7 +330,7 @@ class Application
                 continue;
             }
 
-            $currentRoute = $this->getSlim()->$method($route['route'], function() use ($route) {   //todo change "use" for php 5.4
+            $currentRoute = $this->getSlim()->$method($route['route'], function() use ($route) {
                 return $route['params'];
             });
 
@@ -357,7 +362,9 @@ class Application
             return $_GET['portalId'];
         }
         if (!empty($_COOKIE['auth-token'])) {
-            $token = $this->getContainer()->get('entityManager')->getRepository('AuthToken')->where(array('token' => $_COOKIE['auth-token']))->findOne();
+            $token =
+                $this->getContainer()->get('entityManager')
+                    ->getRepository('AuthToken')->where(['token' => $_COOKIE['auth-token']])->findOne();
 
             if ($token && $token->get('portalId')) {
                 return $token->get('portalId');

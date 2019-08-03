@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -413,7 +413,11 @@ class User extends Record
                     !$entity->isPortal() && !$entity->isApi()
                 )
                 ||
-                (!$entity->isPortal() && !$entity->isApi() && $entity->isAttributeChanged('type'))
+                (
+                    !$entity->isPortal() && !$entity->isApi() && $entity->isAttributeChanged('type') &&
+                    ($entity->isRegular() || $entity->isAdmin()) &&
+                    ($entity->getFetched('type') == 'portal' || $entity->getFetched('type') == 'api')
+                )
             ) {
                 $userCount = $this->getInternalUserCount();
                 if ($userCount >= $this->getConfig()->get('userLimit')) {
@@ -660,6 +664,8 @@ class User extends Record
         unset($data->isAdmin);
         unset($data->isSuperAdmin);
         unset($data->isPortalUser);
+        unset($data->emailAddress);
+        unset($data->password);
         return parent::massUpdate($params, $data);
     }
 

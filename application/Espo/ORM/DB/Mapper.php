@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,6 +32,7 @@ namespace Espo\ORM\DB;
 use Espo\ORM\Entity;
 use Espo\ORM\IEntity;
 use Espo\ORM\EntityFactory;
+use Espo\ORM\Metadata;
 use PDO;
 
 /**
@@ -47,6 +48,8 @@ abstract class Mapper implements IMapper
 
     protected $query;
 
+    protected $metadata;
+
     protected $fieldsMapCache = [];
 
     protected $aliasesCache = [];
@@ -55,10 +58,13 @@ abstract class Mapper implements IMapper
 
     protected $collectionClass = "\\Espo\\ORM\\EntityCollection";
 
-    public function __construct(PDO $pdo, \Espo\ORM\EntityFactory $entityFactory, Query\Base $query) {
+    protected $sthColletctionClass = "\\Espo\\ORM\\Sth2Collection";
+
+    public function __construct(PDO $pdo, \Espo\ORM\EntityFactory $entityFactory, Query\Base $query, Metadata $metadata) {
         $this->pdo = $pdo;
         $this->query = $query;
         $this->entityFactory = $entityFactory;
+        $this->metadata = $metadata;
     }
 
     public function selectById(IEntity $entity, $id, ?array $params = null) : ?IEntity
@@ -109,11 +115,19 @@ abstract class Mapper implements IMapper
     {
         $sql = $this->query->createSelectQuery($entity->getEntityType(), $params);
 
-        return $this->selectByQuery($entity, $sql);
+        return $this->selectByQuery($entity, $sql, $params);
     }
 
-    public function selectByQuery(IEntity $entity, $sql)
+    public function selectByQuery(IEntity $entity, $sql, ?array $params = null)
     {
+        $params = $params ?? [];
+
+        if ($params['returnSthCollection'] ?? false) {
+            $collection = $this->createSthCollection($entity->getEntityType());
+            $collection->setQuery($sql);
+            return $collection;
+        }
+
         $dataArr = [];
         $ps = $this->pdo->query($sql);
         if ($ps) {
@@ -128,6 +142,11 @@ abstract class Mapper implements IMapper
         } else {
             return $dataArr;
         }
+    }
+
+    protected function createSthCollection(string $entityType)
+    {
+        return new $this->sthColletctionClass($entityType, $this->entityFactory, $this->query, $this->pdo);;
     }
 
     public function aggregate(IEntity $entity, ?array $params, string $aggregation, string $aggregationBy)
@@ -153,17 +172,17 @@ abstract class Mapper implements IMapper
         return false;
     }
 
-    public function selectRelated(IEntity $entity, $relationName, $params = [], $totalCount = false)
+    public function selectRelated(IEntity $entity, $relationName, $params = [], $returnTotalCount = false)
     {
         $relDefs = $entity->relations[$relationName];
 
         if (!isset($relDefs['type'])) {
-            throw new \LogicException("Missing 'type' in defenition for relationship {$relationName} in " . $entity->getEntityType() . " entity");
+            throw new \LogicException("Missing 'type' in definition for relationship {$relationName} in " . $entity->getEntityType() . " entity");
         }
 
         if ($relDefs['type'] !== IEntity::BELONGS_TO_PARENT) {
             if (!isset($relDefs['entity'])) {
-                throw new \LogicException("Missing 'entity' in defenition for relationship {$relationName} in " . $entity->getEntityType() . " entity");
+                throw new \LogicException("Missing 'entity' in definition for relationship {$relationName} in " . $entity->getEntityType() . " entity");
             }
 
             $relEntityName = (!empty($relDefs['class'])) ? $relDefs['class'] : $relDefs['entity'];
@@ -174,7 +193,7 @@ abstract class Mapper implements IMapper
             }
         }
 
-        if ($totalCount) {
+        if ($returnTotalCount) {
             $params['aggregation'] = 'COUNT';
             $params['aggregationBy'] = 'id';
         }
@@ -202,7 +221,7 @@ abstract class Mapper implements IMapper
 
                 if ($ps) {
                     foreach ($ps as $row) {
-                        if (!$totalCount) {
+                        if (!$returnTotalCount) {
                             $relEntity = $this->fromRow($relEntity, $row);
                             $relEntity->setAsFetched();
                             return $relEntity;
@@ -228,14 +247,27 @@ abstract class Mapper implements IMapper
                     $params['limit'] = 1;
                 }
 
-                $resultArr = [];
+                if (!empty($relDefs['conditions']) && is_array($relDefs['conditions'])) {
+                    $params['whereClause'][] = $relDefs['conditions'];
+                }
+
+                $resultDataList = [];
 
                 $sql = $this->query->createSelectQuery($relEntity->getEntityType(), $params);
 
+                if (!$returnTotalCount) {
+                    if (!empty($params['returnSthCollection']) && $relType !== IEntity::HAS_ONE) {
+                        $collection = $this->createSthCollection($relEntity->getEntityType());
+                        $collection->setQuery($sql);
+                        return $collection;
+                    }
+                }
+
                 $ps = $this->pdo->query($sql);
+
                 if ($ps) {
-                    if (!$totalCount) {
-                        $resultArr = $ps->fetchAll();
+                    if (!$returnTotalCount) {
+                        $resultDataList = $ps->fetchAll();
                     } else {
                         foreach ($ps as $row) {
                             return $row['AggregateValue'];
@@ -244,8 +276,8 @@ abstract class Mapper implements IMapper
                 }
 
                 if ($relType == IEntity::HAS_ONE) {
-                    if (count($resultArr)) {
-                        $relEntity = $this->fromRow($relEntity, $resultArr[0]);
+                    if (count($resultDataList)) {
+                        $relEntity = $this->fromRow($relEntity, $resultDataList[0]);
                         $relEntity->setAsFetched();
                         return $relEntity;
                     }
@@ -253,11 +285,11 @@ abstract class Mapper implements IMapper
                 } else {
                     if ($this->returnCollection) {
                         $collectionClass = $this->collectionClass;
-                        $collection = new $collectionClass($resultArr, $relEntity->getEntityType(), $this->entityFactory);
+                        $collection = new $collectionClass($resultDataList, $relEntity->getEntityType(), $this->entityFactory);
                         $collection->setAsFetched();
                         return $collection;
                     } else {
-                        return $resultArr;
+                        return $resultDataList;
                     }
                 }
 
@@ -280,12 +312,21 @@ abstract class Mapper implements IMapper
 
                 $sql = $this->query->createSelectQuery($relEntity->getEntityType(), $params);
 
-                $resultArr = [];
+                $resultDataList = [];
+
+                if (!$returnTotalCount) {
+                    if (!empty($params['returnSthCollection'])) {
+                        $collection = $this->createSthCollection($relEntity->getEntityType());
+                        $collection->setQuery($sql);
+                        return $collection;
+                    }
+                }
 
                 $ps = $this->pdo->query($sql);
+
                 if ($ps) {
-                    if (!$totalCount) {
-                        $resultArr = $ps->fetchAll();
+                    if (!$returnTotalCount) {
+                        $resultDataList = $ps->fetchAll();
                     } else {
                         foreach ($ps as $row) {
                             return $row['AggregateValue'];
@@ -294,11 +335,11 @@ abstract class Mapper implements IMapper
                 }
                 if ($this->returnCollection) {
                     $collectionClass = $this->collectionClass;
-                    $collection = new $collectionClass($resultArr, $relEntity->getEntityType(), $this->entityFactory);
+                    $collection = new $collectionClass($resultDataList, $relEntity->getEntityType(), $this->entityFactory);
                     $collection->setAsFetched();
                     return $collection;
                 } else {
-                    return $resultArr;
+                    return $resultDataList;
                 }
             case IEntity::BELONGS_TO_PARENT:
                 $foreignEntityType = $entity->get($keySet['typeKey']);
@@ -318,7 +359,7 @@ abstract class Mapper implements IMapper
 
                 if ($ps) {
                     foreach ($ps as $row) {
-                        if (!$totalCount) {
+                        if (!$returnTotalCount) {
                             $relEntity = $this->fromRow($relEntity, $row);
                             return $relEntity;
                         } else {
@@ -411,7 +452,7 @@ abstract class Mapper implements IMapper
         $relDefs = $entity->relations[$relationName];
 
         if (!isset($relDefs['entity']) || !isset($relDefs['type'])) {
-            throw new \LogicException("Not appropriate defenition for relationship {$relationName} in " . $entity->getEntityType() . " entity");
+            throw new \LogicException("Not appropriate definition for relationship {$relationName} in " . $entity->getEntityType() . " entity");
         }
 
         $relType = $relDefs['type'];
@@ -498,7 +539,7 @@ abstract class Mapper implements IMapper
         $foreignEntityType = $entity->getRelationParam($relationName, 'entity');
 
         if (!$relType || !$foreignEntityType && $relType !== IEntity::BELONGS_TO_PARENT) {
-            throw new \LogicException("Not appropriate defenition for relationship {$relationName} in " . $entity->getEntityType() . " entity");
+            throw new \LogicException("Not appropriate definition for relationship {$relationName} in " . $entity->getEntityType() . " entity");
         }
 
         $className = (!empty($relDefs['class'])) ? $relDefs['class'] : $foreignEntityType;
@@ -698,7 +739,7 @@ abstract class Mapper implements IMapper
         $foreignEntityType = $entity->getRelationParam($relationName, 'entity');
 
         if (!$relType || !$foreignEntityType && $relType !== IEntity::BELONGS_TO_PARENT) {
-            throw new \LogicException("Not appropriate defenition for relationship {$relationName} in " . $entity->getEntityType() . " entity");
+            throw new \LogicException("Not appropriate definition for relationship {$relationName} in " . $entity->getEntityType() . " entity");
         }
 
         $className = (!empty($relDefs['class'])) ? $relDefs['class'] : $foreignEntityType;
@@ -1001,16 +1042,14 @@ abstract class Mapper implements IMapper
             . " AND "
             . "{$relTable}.deleted = " . $this->pdo->quote(0) . "";
 
+        $conditions = $conditions ?? [];
         if (!empty($relDefs['conditions']) && is_array($relDefs['conditions'])) {
-            foreach ($relDefs['conditions'] as $f => $v) {
-                $join .= " AND {$relTable}." . $this->toDb($f) . " = " . $this->pdo->quote($v);
-            }
+            $conditions = array_merge($conditions, $relDefs['conditions']);
         }
 
-        if (!empty($conditions) && is_array($conditions)) {
-            foreach ($conditions as $f => $v) {
-                $join .= " AND {$relTable}." . $this->toDb($f) . " = " . $this->pdo->quote($v);
-            }
+        if (!empty($conditions)) {
+            $conditionsSql = $this->query->buildJoinConditionsStatement($entity, $relTable, $conditions);
+            $join .= " AND " . $conditionsSql;
         }
 
         return $join;

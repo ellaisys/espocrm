@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@
  * these Appropriate Legal Notices must retain the display of the "EspoCRM" word.
  ************************************************************************/
 
-Espo.define('views/record/list', 'view', function (Dep) {
+define('views/record/list', 'view', function (Dep) {
 
     return Dep.extend({
 
@@ -795,12 +795,16 @@ Espo.define('views/record/list', 'view', function (Dep) {
                 ids = this.checkedList;
             }
 
-            this.createView('massUpdate', 'views/modals/mass-update', {
-                scope: this.entityType,
+            var viewName = this.getMetadata().get(['clientDefs', this.entityType, 'modalViews', 'massUpdate']) ||
+                'views/modals/mass-update';
+
+            this.createView('massUpdate', viewName, {
+                scope: this.scope,
+                entityType: this.entityType,
                 ids: ids,
                 where: this.collection.getWhere(),
                 selectData: this.collection.data,
-                byWhere: this.allResultIsChecked
+                byWhere: this.allResultIsChecked,
             }, function (view) {
                 view.render();
                 view.notify(false);
@@ -999,6 +1003,10 @@ Espo.define('views/record/list', 'view', function (Dep) {
                 }, this);
             }
 
+            if (this.forcedCheckAllResultMassActionList) {
+                this.checkAllResultMassActionList = this.forcedCheckAllResultMassActionList;
+            }
+
             if (this.getAcl().get('massUpdatePermission') !== 'yes') {
                 this.removeAllResultMassAction('remove');
             }
@@ -1159,7 +1167,7 @@ Espo.define('views/record/list', 'view', function (Dep) {
                 var field = item.name;
                 var fieldType = this.getMetadata().get(['entityDefs', this.scope, 'fields', field, 'type']);
                 if (!fieldType) return;
-                this.getFieldManager().getAttributeList(fieldType, field).forEach(function (attribute) {
+                this.getFieldManager().getEntityTypeFieldAttributeList(this.scope, field).forEach(function (attribute) {
                     list.push(attribute);
                 }, this);
             }, this);
@@ -1177,21 +1185,25 @@ Espo.define('views/record/list', 'view', function (Dep) {
                 } else if ('widthPx' in this.listLayout[i]) {
                     width = this.listLayout[i].widthPx;
                 }
+                var itemName = this.listLayout[i].name;
 
                 var item = {
-                    name: this.listLayout[i].name,
-                    sortable: !(this.listLayout[i].notSortable || false),
+                    name: itemName,
+                    isSortable: !(this.listLayout[i].notSortable || false),
                     width: width,
                     align: ('align' in this.listLayout[i]) ? this.listLayout[i].align : false,
                 };
                 if ('customLabel' in this.listLayout[i]) {
                     item.customLabel = this.listLayout[i].customLabel;
                     item.hasCustomLabel = true;
+                    item.label = item.customLabel;
+                } else {
+                    item.label = this.translate(itemName, 'fields', this.collection.entityType);
                 }
-                if (item.sortable) {
-                    item.sorted = this.collection.orderBy === this.listLayout[i].name;
-                    if (item.sorted) {
-                        item.asc = this.collection.order === 'asc' ;
+                if (item.isSortable) {
+                    item.isSorted = this.collection.orderBy === itemName;
+                    if (item.isSorted) {
+                        item.isDesc = this.collection.order === 'desc' ;
                     }
                 }
                 defs.push(item);
@@ -1572,7 +1584,8 @@ Espo.define('views/record/list', 'view', function (Dep) {
                 var options = {
                     scope: scope,
                     model: model,
-                    id: id
+                    id: id,
+                    quickEditDisabled: this.quickEditDisabled,
                 };
                 if (this.options.keepCurrentRootUrl) {
                     options.rootUrl = this.getRouter().getCurrentUrl();

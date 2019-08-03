@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -134,7 +134,7 @@ class Manager
             if (is_array($fileName)) {
                 $currentDir = Utils\Util::concatPath($parentDirName, $dirName);
 
-                if (!isset($onlyFileType) || $onlyFileType == $this->isFile($currentDir, $basePath)) {
+                if (!isset($onlyFileType) || $onlyFileType == $this->isFilenameIsFile($currentDir, $basePath)) {
                     $singleFileList[] = $currentDir;
                 }
 
@@ -143,7 +143,7 @@ class Manager
             } else {
                 $currentFileName = Utils\Util::concatPath($parentDirName, $fileName);
 
-                if (!isset($onlyFileType) || $onlyFileType == $this->isFile($currentFileName, $basePath)) {
+                if (!isset($onlyFileType) || $onlyFileType == $this->isFilenameIsFile($currentFileName, $basePath)) {
                     $singleFileList[] = $currentFileName;
                 }
             }
@@ -206,7 +206,7 @@ class Manager
 
         $res = (file_put_contents($fullPath, $data, $flags) !== FALSE);
         if ($res && function_exists('opcache_invalidate')) {
-            opcache_invalidate($fullPath);
+            @opcache_invalidate($fullPath);
         }
 
         return $res;
@@ -467,7 +467,7 @@ class Manager
             if (file_exists($sourceFile) && is_file($sourceFile)) {
                 $res &= copy($sourceFile, $destFile);
                 if (function_exists('opcache_invalidate')) {
-                    opcache_invalidate($destFile);
+                    @opcache_invalidate($destFile);
                 }
             }
         }
@@ -562,7 +562,7 @@ class Manager
 
             if (file_exists($filePath) && is_file($filePath)) {
                 if (function_exists('opcache_invalidate')) {
-                    opcache_invalidate($filePath, true);
+                    @opcache_invalidate($filePath, true);
                 }
                 $result &= unlink($filePath);
             }
@@ -691,6 +691,15 @@ class Manager
         return is_dir($dirname);
     }
 
+    public function isFile($filename, $basePath = null)
+    {
+        if (!empty($basePath)) {
+            $filename = $this->concatPaths([$basePath, $filename]);
+        }
+
+        return is_file($filename);
+    }
+
     /**
      * Check if $filename is file. If $filename doesn'ot exist, check by pathinfo
      *
@@ -699,7 +708,7 @@ class Manager
      *
      * @return boolean
      */
-    public function isFile($filename, $basePath = null)
+    public function isFilenameIsFile($filename, $basePath = null)
     {
         if (!empty($basePath)) {
             $filename = $this->concatPaths([$basePath, $filename]);

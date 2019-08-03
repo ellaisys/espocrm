@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -254,7 +254,7 @@ class BaseTest extends \PHPUnit\Framework\TestCase
 
         $selectParams = $selectManager->buildSelectParams($params);
 
-        $this->assertEquals('2016-10-10', $selectParams['whereClause'][0]['NOT'][0]['date=']);
+        $this->assertEquals('2016-10-10', $selectParams['whereClause'][0]['id!=s']['selectParams']['whereClause'][0]['date=']);
     }
 
     function testBuildSelectParamsComplex()

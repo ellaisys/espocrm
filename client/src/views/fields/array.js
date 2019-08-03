@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@
  * these Appropriate Legal Notices must retain the display of the "EspoCRM" word.
  ************************************************************************/
 
-Espo.define('views/fields/array', ['views/fields/base', 'lib!Selectize'], function (Dep) {
+define('views/fields/array', ['views/fields/base', 'lib!Selectize'], function (Dep) {
 
     return Dep.extend({
 
@@ -228,12 +228,38 @@ Espo.define('views/fields/array', ['views/fields/base', 'lib!Selectize'], functi
             }
         },
 
+        controlAddItemButton: function () {
+            var $select = this.$select;
+            if (!$select) return;
+            if (!$select.get(0)) return;
+
+            var value = $select.val().toString();
+            if (!value && this.params.noEmptyString) {
+                this.$addButton.addClass('disabled').attr('disabled', 'disabled');
+            } else {
+                this.$addButton.removeClass('disabled').removeAttr('disabled');
+            }
+        },
+
         afterRender: function () {
             if (this.mode == 'edit') {
                 this.$list = this.$el.find('.list-group');
                 var $select = this.$select = this.$el.find('.select');
 
                 if (this.allowCustomOptions) {
+                    this.$addButton = this.$el.find('button[data-action="addItem"]');
+
+                    this.$addButton.on('click', function () {
+                        var value = this.$select.val().toString();
+                        this.addValue(value);
+                        $select.val('');
+                        this.controlAddItemButton();
+                    }.bind(this));
+
+                    $select.on('input', function () {
+                        this.controlAddItemButton();
+                    }.bind(this));
+
                     $select.on('keypress', function (e) {
                         if (e.keyCode == 13) {
                             var value = $select.val().toString();
@@ -244,8 +270,11 @@ Espo.define('views/fields/array', ['views/fields/base', 'lib!Selectize'], functi
                             }
                             this.addValue(value);
                             $select.val('');
+                            this.controlAddItemButton();
                         }
                     }.bind(this));
+
+                    this.controlAddItemButton();
                 }
 
                 this.$list.sortable({
@@ -338,7 +367,8 @@ Espo.define('views/fields/array', ['views/fields/base', 'lib!Selectize'], functi
                 var label = null;
                 if (this.translatedOptions != null) {
                     if (item in this.translatedOptions) {
-                        label = this.escapeValue(item);
+                        label = this.translatedOptions[item];
+                        label = this.escapeValue(label);
                     }
                 }
                 if (label === null) {
@@ -421,7 +451,16 @@ Espo.define('views/fields/array', ['views/fields/base', 'lib!Selectize'], functi
 
         fetch: function () {
             var data = {};
-            data[this.name] = Espo.Utils.clone(this.selected || []);
+            var list = Espo.Utils.clone(this.selected || []);
+
+            if (this.params.isSorted && this.translatedOptions) {
+                list = list.sort(function (v1, v2) {
+                     return (this.translatedOptions[v1] || v1).localeCompare(this.translatedOptions[v2] || v2);
+                }.bind(this));
+            }
+
+            data[this.name] = list;
+
             return data;
         },
 

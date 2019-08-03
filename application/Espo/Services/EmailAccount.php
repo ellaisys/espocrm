@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,29 +64,25 @@ class EmailAccount extends Record
 
     public function getFolders($params)
     {
+        $userId = $params['userId'] ?? null;
+        if ($userId) {
+            if (!$this->getUser()->isAdmin() && $userId !== $this->getUser()->id) {
+                throw new Forbidden();
+            }
+        }
+
         $password = $params['password'];
 
         if (!empty($params['id'])) {
             $entity = $this->getEntityManager()->getEntity('EmailAccount', $params['id']);
             if ($entity) {
-                $password = $this->getCrypt()->decrypt($entity->get('password'));
+                $params['password'] = $this->getCrypt()->decrypt($entity->get('password'));
             }
         }
 
-        $imapParams = array(
-            'host' => $params['host'],
-            'port' => $params['port'],
-            'user' => $params['username'],
-            'password' => $password,
-        );
+        $storage = $this->createStorage($params);
 
-        if (!empty($params['ssl'])) {
-            $imapParams['ssl'] = 'SSL';
-        }
-
-        $foldersArr = array();
-
-        $storage = new \Espo\Core\Mail\Mail\Storage\Imap($imapParams);
+        $foldersArr = [];
 
         $folders = new \RecursiveIteratorIterator($storage->getFolders(), \RecursiveIteratorIterator::SELF_FIRST);
         foreach ($folders as $name => $folder) {
@@ -97,23 +93,67 @@ class EmailAccount extends Record
 
     public function testConnection(array $params)
     {
-        $imapParams = array(
-            'host' => $params['host'],
-            'port' => $params['port'],
-            'user' => $params['username'],
-            'password' => $params['password']
-        );
+        $storage = $this->createStorage($params);
 
-        if (!empty($params['ssl'])) {
-            $imapParams['ssl'] = 'SSL';
+        $userId = $params['userId'] ?? null;
+        if ($userId) {
+            if (!$this->getUser()->isAdmin() && $userId !== $this->getUser()->id) {
+                throw new Forbidden();
+            }
         }
-
-        $storage = new \Espo\Core\Mail\Mail\Storage\Imap($imapParams);
 
         if ($storage->getFolders()) {
             return true;
         }
         throw new Error();
+    }
+
+    protected function createStorage(array $params)
+    {
+
+        $emailAddress = $params['emailAddress'] ?? null;
+        $userId = $params['userId'] ?? null;
+
+        $handler = null;
+
+        $imapParams = null;
+
+        if ($emailAddress && $userId) {
+            $emailAddress = strtolower($emailAddress);
+            $userData = $this->getEntityManager()->getRepository('UserData')->getByUserId($userId);
+            if ($userData) {
+                $imapHandlers = $userData->get('imapHandlers') ?? (object) [];
+                if (is_object($imapHandlers)) {
+                    if (isset($imapHandlers->$emailAddress)) {
+                        $handlerClassName = $imapHandlers->$emailAddress;
+                        try {
+                            $handler = $this->getInjection('injectableFactory')->createByClassName($handlerClassName);
+                        } catch (\Throwable $e) {
+                            $GLOBALS['log']->error("EmailAccount: Could not create Imap Handler for {$emailAddress}. Error: " . $e->getMessage());
+                        }
+                        if (method_exists($handler, 'prepareProtocol')) {
+                            $imapParams = $handler->prepareProtocol($userId, $emailAddress, $params);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!$imapParams) {
+            $imapParams = [
+                'host' => $params['host'],
+                'port' => $params['port'],
+                'user' => $params['username'],
+                'password' => $params['password'],
+            ];
+            if (!empty($params['ssl'])) {
+                $imapParams['ssl'] = 'SSL';
+            }
+        }
+
+        $storage = new \Espo\Core\Mail\Mail\Storage\Imap($imapParams);
+
+        return $storage;
     }
 
     public function create($data)
@@ -151,18 +191,20 @@ class EmailAccount extends Record
 
     protected function getStorage(Entity $emailAccount)
     {
-        $imapParams = array(
+        $params = [
             'host' => $emailAccount->get('host'),
             'port' => $emailAccount->get('port'),
-            'user' => $emailAccount->get('username'),
+            'username' => $emailAccount->get('username'),
             'password' => $this->getCrypt()->decrypt($emailAccount->get('password')),
-        );
+            'emailAddress' => $emailAccount->get('emailAddress'),
+            'userId' => $emailAccount->get('assignedUserId'),
+        ];
 
         if ($emailAccount->get('ssl')) {
-            $imapParams['ssl'] = 'SSL';
+            $params['ssl'] = true;
         }
 
-        $storage = new \Espo\Core\Mail\Mail\Storage\Imap($imapParams);
+        $storage = $this->createStorage($params);
 
         return $storage;
     }
@@ -451,8 +493,10 @@ class EmailAccount extends Record
             $smtpParams['port'] = $emailAccount->get('smtpPort');
             $smtpParams['auth'] = $emailAccount->get('smtpAuth');
             $smtpParams['security'] = $emailAccount->get('smtpSecurity');
-            $smtpParams['username'] = $emailAccount->get('smtpUsername');
-            $smtpParams['password'] = $emailAccount->get('smtpPassword');
+            if ($emailAccount->get('smtpAuth')) {
+                $smtpParams['username'] = $emailAccount->get('smtpUsername');
+                $smtpParams['password'] = $emailAccount->get('smtpPassword');
+            }
             if (array_key_exists('password', $smtpParams)) {
                 $smtpParams['password'] = $this->getCrypt()->decrypt($smtpParams['password']);
             }

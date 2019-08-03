@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,7 +41,6 @@ Espo.define('views/site/navbar', 'view', function (Dep) {
                 menuDataList: this.getMenuDataList(),
                 quickCreateList: this.quickCreateList,
                 enableQuickCreate: this.quickCreateList.length > 0,
-                userName: this.getUser().get('name'),
                 userId: this.getUser().id,
                 logoSrc: this.getLogoSrc()
             };
@@ -352,6 +351,8 @@ Espo.define('views/site/navbar', 'view', function (Dep) {
 
             var $more = $tabs.find('li.more > ul');
 
+            minHeight = Math.max(minHeight, $more.height());
+
             if ($more.children().length === 0) {
                 $more.parent().addClass('hidden');
             }
@@ -380,6 +381,8 @@ Espo.define('views/site/navbar', 'view', function (Dep) {
                 updateSizeForVertical();
             });
             updateSizeForVertical();
+
+            this.$el.find('.notifications-badge-container').insertAfter(this.$el.find('.quick-create-container'));
         },
 
         afterRender: function () {
@@ -524,7 +527,7 @@ Espo.define('views/site/navbar', 'view', function (Dep) {
             var list = [
                 {
                     link: '#User/view/' + this.getUser().id,
-                    html: avatarHtml + this.getUser().get('name')
+                    html: avatarHtml + this.getHelper().escapeString(this.getUser().get('name')),
                 },
                 {divider: true}
             ];
@@ -582,8 +585,7 @@ Espo.define('views/site/navbar', 'view', function (Dep) {
         },
 
         actionLogout: function () {
-            this.getRouter().dispatch(null, 'logout');
-            this.getRouter().navigate('', {trigger: false});
+            this.getRouter().logout();
         },
 
         actionShowLastViewed: function () {

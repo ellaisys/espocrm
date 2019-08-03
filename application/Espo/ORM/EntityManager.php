@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -97,7 +97,7 @@ class EntityManager
         if (empty($this->query)) {
             $platform = $this->params['platform'];
             $className = '\\Espo\\ORM\\DB\\Query\\' . ucfirst($platform);
-            $this->query = new $className($this->getPDO(), $this->entityFactory);
+            $this->query = new $className($this->getPDO(), $this->entityFactory, $this->metadata);
         }
         return $this->query;
     }
@@ -125,7 +125,7 @@ class EntityManager
         }
 
         if (empty($this->mappers[$className])) {
-            $this->mappers[$className] = new $className($this->getPDO(), $this->entityFactory, $this->getQuery());
+            $this->mappers[$className] = new $className($this->getPDO(), $this->entityFactory, $this->getQuery(), $this->metadata);
         }
         return $this->mappers[$className];
     }
@@ -186,6 +186,12 @@ class EntityManager
         $entity->set($data);
         $this->saveEntity($entity, $options);
         return $entity;
+    }
+
+    public function fetchEntity(string $entityType, string $id)
+    {
+        if (empty($id)) return;
+        return $this->getEntity($entityType, $id);
     }
 
     public function getRepository($entityType)

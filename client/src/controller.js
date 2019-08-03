@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -192,13 +192,14 @@ define('controller', [], function () {
             this.handleAccessGlobal();
 
             action = action || this.defaultAction;
-            var method = action;
+            var method = 'action' + Espo.Utils.upperCaseFirst(action);
+
             if (!(method in this)) {
                 throw new Espo.Exceptions.NotFound("Action '" + this.name + "#" + action + "' is not found");
             }
 
-            var preMethod = 'before' + Espo.Utils.upperCaseFirst(method);
-            var postMethod = 'after' + Espo.Utils.upperCaseFirst(method);
+            var preMethod = 'before' + Espo.Utils.upperCaseFirst(action);
+            var postMethod = 'after' + Espo.Utils.upperCaseFirst(action);
 
             if (preMethod in this) {
                 this[preMethod].call(this, options || {});

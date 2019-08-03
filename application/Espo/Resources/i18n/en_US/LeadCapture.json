@@ -16,7 +16,9 @@
         "targetTeam": "Target Team",
         "exampleRequestMethod": "Method",
         "exampleRequestUrl": "URL",
-        "exampleRequestPayload": "Payload"
+        "exampleRequestPayload": "Payload",
+        "createLeadBeforeOptInConfirmation": "Create Lead before confirmation",
+        "duplicateCheck": "Duplicate Check"
     },
     "links": {
         "targetList": "Target List",

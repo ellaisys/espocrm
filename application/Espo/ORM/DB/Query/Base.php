@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,6 +32,7 @@ namespace Espo\ORM\DB\Query;
 use Espo\ORM\Entity;
 use Espo\ORM\IEntity;
 use Espo\ORM\EntityFactory;
+use Espo\ORM\Metadata;
 use PDO;
 
 abstract class Base
@@ -56,6 +57,7 @@ abstract class Base
         'customHaving',
         'skipTextColumns',
         'maxTextColumnsLength',
+        'useIndexList',
     ];
 
     protected static $sqlOperators = [
@@ -107,6 +109,7 @@ abstract class Base
         'UPPER',
         'TRIM',
         'LENGTH',
+        'CHAR_LENGTH',
         'YEAR_0',
         'YEAR_1',
         'YEAR_2',
@@ -133,10 +136,32 @@ abstract class Base
         'QUARTER_11',
         'CONCAT',
         'TZ',
+        'NOW',
+        'ADD',
+        'SUB',
+        'MUL',
+        'DIV',
+        'MOD',
         'FLOOR',
         'CEIL',
         'ROUND',
         'COALESCE',
+        'IF',
+        'LIKE',
+        'NOT_LIKE',
+        'EQUAL',
+        'NOT_EQUAL',
+        'GREATER_THAN',
+        'LESS_THAN',
+        'GREATER_THAN_OR_EQUAL',
+        'LESS_THAN_OR_EQUAL',
+        'IS_NULL',
+        'IS_NOT_NULL',
+        'OR',
+        'AND',
+        'NOT',
+        'IN',
+        'NOT_IN',
     ];
 
     protected $multipleArgumentsFunctionList = [
@@ -144,6 +169,66 @@ abstract class Base
         'TZ',
         'ROUND',
         'COALESCE',
+        'IF',
+        'LIKE',
+        'NOT_LIKE',
+        'EQUAL',
+        'NOT_EQUAL',
+        'GREATER_THAN',
+        'LESS_THAN',
+        'GREATER_THAN_OR_EQUAL',
+        'LESS_THAN_OR_EQUAL',
+        'OR',
+        'AND',
+        'IN',
+        'NOT_IN',
+        'ADD',
+        'SUB',
+        'MUL',
+        'DIV',
+        'MOD',
+    ];
+
+    protected $comparisonFunctionList = [
+        'LIKE',
+        'NOT_LIKE',
+        'EQUAL',
+        'NOT_EQUAL',
+        'GREATER_THAN',
+        'LESS_THAN',
+        'GREATER_THAN_OR_EQUAL',
+        'LESS_THAN_OR_EQUAL',
+    ];
+
+    protected $comparisonFunctionOperatorMap = [
+        'LIKE' => 'LIKE',
+        'NOT_LIKE' => 'NOT LIKE',
+        'EQUAL' => '=',
+        'NOT_EQUAL' => '<>',
+        'GREATER_THAN' => '>',
+        'LESS_THAN' => '<',
+        'GREATER_THAN_OR_EQUAL' => '>=',
+        'LESS_THAN_OR_EQUAL' => '<=',
+        'IS_NULL' => 'IS NULL',
+        'IS_NOT_NULL' => 'IS NOT NULL',
+        'IN' => 'IN',
+        'NOT_IN' => 'NOT IN',
+    ];
+
+    protected $mathFunctionOperatorMap = [
+        'ADD' => '+',
+        'SUB' => '-',
+        'MUL' => '*',
+        'DIV' => '/',
+        'MOD' => '%',
+    ];
+
+    protected $mathOperationFunctionList = [
+        'ADD',
+        'SUB',
+        'MUL',
+        'DIV',
+        'MOD',
     ];
 
     protected $matchFunctionList = ['MATCH_BOOLEAN', 'MATCH_NATURAL_LANGUAGE', 'MATCH_QUERY_EXPANSION'];
@@ -158,16 +243,19 @@ abstract class Base
 
     protected $pdo;
 
+    protected $metadata;
+
     protected $fieldsMapCache = [];
 
     protected $aliasesCache = [];
 
     protected $seedCache = [];
 
-    public function __construct(PDO $pdo, EntityFactory $entityFactory)
+    public function __construct(PDO $pdo, EntityFactory $entityFactory, Metadata $metadata = null)
     {
         $this->entityFactory = $entityFactory;
         $this->pdo = $pdo;
+        $this->metadata = $metadata;
     }
 
     protected function getSeed($entityType)
@@ -236,6 +324,7 @@ abstract class Base
             if ($params['distinct'] && $params['aggregation'] == 'COUNT') {
                 $aggDist = true;
             }
+            $params['select'] = [];
             $selectPart = $this->getAggregationSelect($entity, $params['aggregation'], $params['aggregationBy'], $aggDist);
         }
 
@@ -293,22 +382,59 @@ abstract class Base
             $groupByPart = implode(', ', $arr);
         }
 
-        if (empty($params['aggregation'])) {
-            $sql = $this->composeSelectQuery($this->toDb($entity->getEntityType()), $selectPart, $joinsPart, $wherePart, $orderPart, $params['offset'], $params['limit'], $params['distinct'], null, $groupByPart, $havingPart);
-        } else {
-            $sql = $this->composeSelectQuery($this->toDb($entity->getEntityType()), $selectPart, $joinsPart, $wherePart, null, null, null, false, $params['aggregation'], $groupByPart, $havingPart);
-            if ($params['aggregation'] === 'COUNT' && $groupByPart && $havingPart) {
-                $sql = "SELECT COUNT(*) AS `AggregateValue` FROM ({$sql}) AS `countAlias`";
+        $indexKeyList = null;
+        if (!empty($params['useIndexList']) && $this->metadata) {
+            $indexKeyList = [];
+            foreach ($params['useIndexList'] as $indexName) {
+                $indexKey = $this->metadata->get($entityType, ['indexes', $indexName, 'key']);
+                if ($indexKey) {
+                    $indexKeyList[] = $indexKey;
+                }
             }
         }
 
+        if (!empty($params['aggregation'])) {
+            $sql = $this->composeSelectQuery(
+                $this->toDb($entityType),
+                $selectPart,
+                $joinsPart,
+                $wherePart,
+                null,
+                null,
+                null,
+                false,
+                $params['aggregation'],
+                $groupByPart,
+                $havingPart,
+                $indexKeyList
+            );
+            if ($params['aggregation'] === 'COUNT' && $groupByPart && $havingPart) {
+                $sql = "SELECT COUNT(*) AS `AggregateValue` FROM ({$sql}) AS `countAlias`";
+            }
+            return $sql;
+        }
+
+        $sql = $this->composeSelectQuery(
+            $this->toDb($entityType),
+            $selectPart,
+            $joinsPart,
+            $wherePart,
+            $orderPart,
+            $params['offset'],
+            $params['limit'],
+            $params['distinct'],
+            null,
+            $groupByPart,
+            $havingPart,
+            $indexKeyList
+        );
         return $sql;
     }
 
     protected function getFunctionPart($function, $part, $entityType, $distinct = false, ?array $argumentPartList = null)
     {
         if (!in_array($function, $this->functionList)) {
-            throw new \Exception("Not allowed function '".$function."'.");
+            throw new \Exception("ORM Query: Not allowed function '{$function}'.");
         }
 
         if (strpos($function, 'YEAR_') === 0 && $function !== 'YEAR_NUMBER') {
@@ -342,16 +468,53 @@ abstract class Base
             return $this->getFunctionPartTZ($entityType, $argumentPartList);
         }
 
+        if (in_array($function, $this->comparisonFunctionList)) {
+            if (count($argumentPartList) < 2) {
+                throw new \Exception("ORM Query: Not enough arguments for function '{$function}'.");
+            }
+            $operator = $this->comparisonFunctionOperatorMap[$function];
+            return $argumentPartList[0] . ' ' . $operator . ' ' . $argumentPartList[1];
+        }
+
+        if (in_array($function, $this->mathOperationFunctionList)) {
+            if (count($argumentPartList) < 2) {
+                throw new \Exception("ORM Query: Not enough arguments for function '{$function}'.");
+            }
+            $operator = $this->mathFunctionOperatorMap[$function];
+            return '(' . implode(' ' . $operator . ' ', $argumentPartList) . ')';
+        }
+
+        if (in_array($function, ['IN', 'NOT_IN'])) {
+            $operator = $this->comparisonFunctionOperatorMap[$function];
+
+            if (count($argumentPartList) < 2) {
+                throw new \Exception("ORM Query: Not enough arguments for function '{$function}'.");
+            }
+            $operatorArgumentList = $argumentPartList;
+            array_shift($operatorArgumentList);
+
+            return $argumentPartList[0] .  ' ' . $operator . ' (' . implode(', ', $operatorArgumentList) . ')';
+        }
+
+        if (in_array($function, ['IS_NULL', 'IS_NOT_NULL'])) {
+            $operator = $this->comparisonFunctionOperatorMap[$function];
+            return $part . ' ' . $operator;
+        }
+
+        if (in_array($function, ['OR', 'AND'])) {
+            return implode(' ' . $function . ' ', $argumentPartList);
+        }
+
         switch ($function) {
             case 'MONTH':
                 return "DATE_FORMAT({$part}, '%Y-%m')";
             case 'DAY':
                 return "DATE_FORMAT({$part}, '%Y-%m-%d')";
-            case 'WEEK':
             case 'WEEK_0':
-                return "CONCAT(YEAR({$part}), '/', WEEK({$part}, 0))";
+                return "CONCAT(SUBSTRING(YEARWEEK({$part}, 6), 1, 4), '/', TRIM(LEADING '0' FROM SUBSTRING(YEARWEEK({$part}, 6), 5, 2)))";
+            case 'WEEK':
             case 'WEEK_1':
-                return "CONCAT(YEAR({$part}), '/', WEEK({$part}, 5))";
+                return "CONCAT(SUBSTRING(YEARWEEK({$part}, 3), 1, 4), '/', TRIM(LEADING '0' FROM SUBSTRING(YEARWEEK({$part}, 3), 5, 2)))";
             case 'QUARTER':
                 return "CONCAT(YEAR({$part}), '_', QUARTER({$part}))";
             case 'MONTH_NUMBER':
@@ -363,13 +526,11 @@ abstract class Base
             case 'YEAR_NUMBER':
                 $function = 'YEAR';
                 break;
-            case 'WEEK_NUMBER':
-                $function = 'WEEK';
-                break;
             case 'WEEK_NUMBER_0':
-                return "WEEK({$part}, 0)";
+                return "WEEK({$part}, 6)";
+            case 'WEEK_NUMBER':
             case 'WEEK_NUMBER_1':
-                return "WEEK({$part}, 5)";
+                return "WEEK({$part}, 3)";
             case 'HOUR_NUMBER':
                 $function = 'HOUR';
                 break;
@@ -382,6 +543,8 @@ abstract class Base
             case 'DAYOFWEEK_NUMBER':
                 $function = 'DAYOFWEEK';
                 break;
+            case 'NOT':
+                return 'NOT ' . $part;
         }
 
         if ($distinct) {
@@ -508,6 +671,39 @@ abstract class Base
         return $part;
     }
 
+    public static function getAllAttributesFromComplexExpression(string $expression, &$list = null) : array
+    {
+        if (!$list) $list = [];
+
+        $arguments = $expression;
+
+        if (strpos($expression, ':')) {
+            $dilimeterPosition = strpos($expression, ':');
+            $function = substr($expression, 0, $dilimeterPosition);
+            $arguments = substr($expression, $dilimeterPosition + 1);
+            if (substr($arguments, 0, 1) === '(' && substr($arguments, -1) === ')') {
+                $arguments = substr($arguments, 1, -1);
+            }
+        } else {
+            if (
+                !self::isArgumentString($expression) &&
+                !self::isArgumentNumeric($expression) &&
+                !self::isArgumentBoolOrNull($expression)
+            ) {
+                $list[] = $expression;
+            }
+            return $list;
+        }
+
+        $argumentList = self::parseArgumentListFromFunctionContent($arguments);
+
+        foreach ($argumentList as $argument) {
+            self::getAllAttributesFromComplexExpression($argument, $list);
+        }
+
+        return $list;
+    }
+
     static protected function parseArgumentListFromFunctionContent($functionContent)
     {
         $functionContent = trim($functionContent);
@@ -571,22 +767,36 @@ abstract class Base
         return $argumentList;
     }
 
+    protected static function isArgumentString(string $argument)
+    {
+        return
+            substr($argument, 0, 1) === '\'' && substr($argument, -1) === '\''
+            ||
+            substr($argument, 0, 1) === '"' && substr($argument, -1) === '"';
+    }
+
+    protected static function isArgumentNumeric(string $argument)
+    {
+        return is_numeric($argument);
+    }
+
+    protected static function isArgumentBoolOrNull(string $argument)
+    {
+        return in_array(strtoupper($argument), ['NULL', 'TRUE', 'FALSE']);
+    }
+
     protected function getFunctionArgumentPart($entity, $attribute, $distinct = false, &$params = null)
     {
         $argument = $attribute;
 
-        if (
-            substr($argument, 0, 1) === '\'' && substr($argument, -1) === '\''
-            ||
-            substr($argument, 0, 1) === '"' && substr($argument, -1) === '"'
-        ) {
+        if (self::isArgumentString($argument)) {
             $string = substr($argument, 1, -1);
             $string = $this->quote($string);
             return $string;
-        } else if (is_numeric($argument)) {
+        } else if (self::isArgumentNumeric($argument)) {
             $string = $this->quote($argument);
             return $string;
-        } else if (in_array(strtoupper($argument), ['NULL', 'TRUE', 'FALSE'])) {
+        } else if (self::isArgumentBoolOrNull($argument)) {
             return strtoupper($argument);
         }
 
@@ -608,7 +818,12 @@ abstract class Base
             $attribute = $this->sanitize($attribute);
         }
 
-        $part = $this->toDb($attribute);
+        if ($attribute !== '') {
+            $part = $this->toDb($attribute);
+        } else {
+            $part = '';
+        }
+
         if ($relName) {
             $part = $relName . '.' . $part;
 
@@ -626,7 +841,9 @@ abstract class Base
             if (!empty($entity->fields[$attribute]['select'])) {
                 $part = $this->getAttributeSql($entity, $attribute, 'select', $params);
             } else {
-                $part = $this->toDb($entityType) . '.' . $part;
+                if ($part !== '') {
+                    $part = $this->toDb($entityType) . '.' . $part;
+                }
             }
         }
 
@@ -747,7 +964,7 @@ abstract class Base
                             if (!empty($fieldDefs['notStorable']) || !empty($fieldDefs['noSelect'])) {
                                 continue;
                             }
-                            $part = $this->getFieldPath($entity, $attribute[0]);
+                            $part = $this->getFieldPath($entity, $attribute[0], $params);
                         }
                     }
                 }
@@ -775,7 +992,7 @@ abstract class Base
                 if ($attributeType === null) {
                     continue;
                 }
-                $fieldPath = $this->getFieldPath($entity, $attribute);
+                $fieldPath = $this->getFieldPath($entity, $attribute, $params);
                 if ($attributeType === $entity::TEXT && $maxTextColumnsLength !== null) {
                     $fieldPath = 'LEFT(' . $fieldPath . ', '. intval($maxTextColumnsLength) . ')';
                 }
@@ -836,7 +1053,7 @@ abstract class Base
                     continue;
                 }
 
-                if (!empty($select)) {
+                if (is_array($select)) {
                     if (!in_array($relationName, $relationsToJoin)) {
                         continue;
                     }
@@ -873,7 +1090,7 @@ abstract class Base
 
             if (strpos($orderBy, 'LIST:') === 0) {
                 list($l, $field, $list) = explode(':', $orderBy);
-                $fieldPath = $this->getFieldPathForOrderBy($entity, $field);
+                $fieldPath = $this->getFieldPathForOrderBy($entity, $field, $params);
                 $listQuoted = [];
                 $list = array_reverse(explode(',', $list));
                 foreach ($list as $i => $listItem) {
@@ -911,7 +1128,7 @@ abstract class Base
                 if ($useColumnAlias) {
                     $fieldPath = '`'. $this->sanitizeSelectAlias($orderBy) . '`';
                 } else {
-                    $fieldPath = $this->getFieldPathForOrderBy($entity, $orderBy);
+                    $fieldPath = $this->getFieldPathForOrderBy($entity, $orderBy, $params);
                 }
                 return "{$fieldPath} " . $order;
             }
@@ -935,13 +1152,17 @@ abstract class Base
         return $sql;
     }
 
-    protected function getFieldPathForOrderBy($entity, $orderBy)
+    protected function getFieldPathForOrderBy($entity, $orderBy, $params)
     {
         if (strpos($orderBy, '.') !== false) {
-            list($alias, $field) = explode('.', $orderBy);
-            $fieldPath = $this->sanitize($alias) . '.' . $this->toDb($this->sanitize($field));
+            $fieldPath = $this->convertComplexExpression(
+                $entity,
+                $orderBy,
+                false,
+                $params
+            );
         } else {
-            $fieldPath = $this->getFieldPath($entity, $orderBy);
+            $fieldPath = $this->getFieldPath($entity, $orderBy, $params);
         }
         return $fieldPath;
     }
@@ -1035,7 +1256,7 @@ abstract class Base
         return $aliases;
     }
 
-    protected function getFieldPath(IEntity $entity, $field)
+    protected function getFieldPath(IEntity $entity, $field, &$params = null)
     {
         if (isset($entity->fields[$field])) {
             $f = $entity->fields[$field];
@@ -1069,7 +1290,8 @@ abstract class Base
                             }
                             $fieldPath = 'TRIM(CONCAT(' . implode(', ', $foreigh). '))';
                         } else {
-                            $fieldPath = $this->getAlias($entity, $relationName) . '.' . $this->toDb($foreigh);
+                            $expression = $this->getAlias($entity, $relationName) . '.' . $foreigh;
+                            $fieldPath = $this->convertComplexExpression($entity, $expression, false, $params);
                         }
                     }
                     break;
@@ -1145,8 +1367,8 @@ abstract class Base
 
             if (!preg_match('/^[a-z0-9]+$/i', $field)) {
                 foreach (self::$comparisonOperators as $op => $opDb) {
-                    if (strpos($field, $op) !== false) {
-                        $field = trim(str_replace($op, '', $field));
+                    if (substr($field, -strlen($op)) === $op) {
+                        $field = trim(substr($field, 0, -strlen($op)));
                         $operatorOrm = $op;
                         $operator = $opDb;
                         break;
@@ -1254,13 +1476,17 @@ abstract class Base
                         if (isset($fieldDefs['relation'])) {
                             $relationName = $fieldDefs['relation'];
                             if (isset($entity->relations[$relationName])) {
-
                                 $alias = $this->getAlias($entity, $relationName);
                                 if ($alias) {
                                     if (!is_array($fieldDefs['foreign'])) {
-                                        $leftPart = $alias . '.' . $this->toDb($fieldDefs['foreign']);
+                                        $leftPart = $this->convertComplexExpression(
+                                            $entity,
+                                            $alias . '.' . $fieldDefs['foreign'],
+                                            false,
+                                            $params
+                                        );
                                     } else {
-                                        $leftPart = $this->getFieldPath($entity, $field);
+                                        $leftPart = $this->getFieldPath($entity, $field, $params);
                                     }
                                 }
                             }
@@ -1289,12 +1515,14 @@ abstract class Base
                     }
                     $wherePartList[] = $leftPart . " " . $operator . " (" . $this->createSelectQuery($subQueryEntityType, $subQuerySelectParams) . ")";
                 } else if (!is_array($value)) {
-                    if (!is_null($value)) {
-                        if ($isNotValue) {
+                    if ($isNotValue) {
+                        if (!is_null($value)) {
                             $wherePartList[] = $leftPart . " " . $operator . " " . $this->convertComplexExpression($entity, $value, $params);
                         } else {
-                            $wherePartList[] = $leftPart . " " . $operator . " " . $this->pdo->quote($value);
+                            $wherePartList[] = $leftPart;
                         }
+                    } else if (!is_null($value)) {
+                        $wherePartList[] = $leftPart . " " . $operator . " " . $this->pdo->quote($value);
                     } else {
                         if ($operator == '=') {
                             $wherePartList[] = $leftPart . " IS NULL";
@@ -1362,12 +1590,19 @@ abstract class Base
 
     public function sanitizeSelectAlias($string)
     {
-        return preg_replace('/[^A-Za-z0-9_:.,\-\(\)]+/', '', $string);
+        $string = preg_replace('/[^A-Za-z\r\n0-9_:\'" .,\-\(\)]+/', '', $string);
+        if (strlen($string) > 256) $string = substr($string, 0, 256);
+        return $string;
     }
 
     public function sanitizeSelectItem($string)
     {
         return preg_replace('/[^A-Za-z0-9_:.]+/', '', $string);
+    }
+
+    public function sanitizeIndexName($string)
+    {
+        return preg_replace('/[^A-Za-z0-9_]+/', '', $string);
     }
 
     protected function getJoins(IEntity $entity, array $joins, $isLeft = false, $joinConditions = [])
@@ -1403,9 +1638,44 @@ abstract class Base
         return implode(' ', $joinSqlList);
     }
 
+    public function buildJoinConditionsStatement($entity, $alias = null, array $conditions)
+    {
+        $sql = '';
+
+        $joinSqlList = [];
+        foreach ($conditions as $left => $right) {
+            $joinSqlList[] = $this->buildJoinConditionStatement($entity, $alias, $left, $right);
+        }
+        if (count($joinSqlList)) {
+            $sql .= implode(" AND ", $joinSqlList);
+        }
+
+        return $sql;
+    }
+
     protected function buildJoinConditionStatement($entity, $alias = null, $left, $right)
     {
         $sql = '';
+
+        if (is_array($right) && (is_int($left) || in_array($left, ['AND', 'OR']))) {
+            $logicalOperator = 'AND';
+            if ($left == 'OR') {
+                $logicalOperator = 'OR';
+            }
+
+            $sqlList = [];
+            foreach ($right as $k => $v) {
+                $sqlList[] = $this->buildJoinConditionStatement($entity, $alias, $k, $v);
+            }
+
+            $sql = implode(' ' .$logicalOperator . ' ', $sqlList);
+
+            if (count($sqlList) > 1) {
+                $sql = '(' . $sql . ')';
+            }
+
+            return $sql;
+        }
 
         $operator = '=';
 
@@ -1417,8 +1687,8 @@ abstract class Base
 
         if (!preg_match('/^[a-z0-9]+$/i', $left)) {
             foreach (self::$comparisonOperators as $op => $opDb) {
-                if (strpos($left, $op) !== false) {
-                    $left = trim(str_replace($op, '', $left));
+                if (substr($left, -strlen($op)) === $op) {
+                    $left = trim(substr($left, 0, -strlen($op)));
                     $operator = $opDb;
                     break;
                 }
@@ -1513,6 +1783,10 @@ abstract class Base
 
         $alias = $this->sanitize($alias);
 
+        if (!empty($relOpt['conditions']) && is_array($relOpt['conditions'])) {
+            $conditions = array_merge($conditions, $relOpt['conditions']);
+        }
+
         $type = $relOpt['type'];
 
         switch ($type) {
@@ -1533,10 +1807,6 @@ abstract class Base
                     "{$prefix}JOIN `{$relTable}` AS `{$midAlias}` ON {$this->toDb($entity->getEntityType())}." . $this->toDb($key) . " = {$midAlias}." . $this->toDb($nearKey)
                     . " AND "
                     . "{$midAlias}.deleted = " . $this->pdo->quote(0);
-
-                if (!empty($relOpt['conditions']) && is_array($relOpt['conditions'])) {
-                    $conditions = array_merge($conditions, $relOpt['conditions']);
-                }
 
                 $joinSqlList = [];
                 foreach ($conditions as $left => $right) {
@@ -1561,7 +1831,6 @@ abstract class Base
                     "{$prefix}JOIN `{$distantTable}` AS `{$alias}` ON {$this->toDb($entity->getEntityType())}." . $this->toDb('id') . " = {$alias}." . $this->toDb($foreignKey)
                     . " AND "
                     . "{$alias}.deleted = " . $this->pdo->quote(0) . "";
-
 
                 $joinSqlList = [];
                 foreach ($conditions as $left => $right) {
@@ -1603,7 +1872,20 @@ abstract class Base
         return false;
     }
 
-    public function composeSelectQuery($table, $select, $joins = '', $where = '', $order = '', $offset = null, $limit = null, $distinct = null, $aggregation = false, $groupBy = null, $having = null)
+    public function composeSelectQuery(
+        $table,
+        $select,
+        $joins = '',
+        $where = '',
+        $order = '',
+        $offset = null,
+        $limit = null,
+        $distinct = null,
+        $aggregation = false,
+        $groupBy = null,
+        $having = null,
+        $indexKeyList = null
+    )
     {
         $sql = "SELECT";
 
@@ -1612,6 +1894,12 @@ abstract class Base
         }
 
         $sql .= " {$select} FROM `{$table}`";
+
+        if (!empty($indexKeyList)) {
+            foreach ($indexKeyList as $index) {
+                $sql .= " USE INDEX (`".$this->sanitizeIndexName($index)."`)";
+            }
+        }
 
         if (!empty($joins)) {
             $sql .= " {$joins}";

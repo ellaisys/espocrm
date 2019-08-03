@@ -53,12 +53,12 @@
                 "description":"systemRequirements"
             },
             {
-                "url":"#Admin/clearCache",
+                "action": "clearCache",
                 "label":"Clear Cache",
                 "description":"clearCache"
             },
             {
-                "url":"#Admin/rebuild",
+                "action": "rebuild",
                 "label":"Rebuild",
                 "description":"rebuild"
             }
@@ -203,9 +203,32 @@
                 "description":"leadCapture"
             },
             {
+                "url": "#Template",
+                "label": "PDF Templates",
+                "description": "pdfTemplates"
+
+            },
+            {
+
+                "url": "#Webhook",
+                "label": "Webhooks",
+                "description": "webhooks"
+            },
+            {
+
+                "url": "#DashboardTemplate",
+                "label": "Dashboard Templates",
+                "description": "dashboardTemplates"
+            },
+            {
                 "url": "#Attachment",
                 "label": "Attachments",
                 "description": "attachments"
+            },
+            {
+                "url": "#Admin/jobs",
+                "label": "Jobs",
+                "description": "jobs"
             }
         ],
         "order": 25

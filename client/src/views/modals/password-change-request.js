@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,13 +26,17 @@
  * these Appropriate Legal Notices must retain the display of the "EspoCRM" word.
  ************************************************************************/
 
-Espo.define('views/modals/password-change-request', 'views/modal', function (Dep) {
+define('views/modals/password-change-request', 'views/modal', function (Dep) {
 
     return Dep.extend({
 
         cssName: 'password-change-request',
 
+        className: 'dialog dialog-centered',
+
         template: 'modals/password-change-request',
+
+        noFullHeight: true,
 
         setup: function () {
 
@@ -49,15 +53,28 @@ Espo.define('views/modals/password-change-request', 'views/modal', function (Dep
             ];
 
             this.headerHtml = this.translate('Password Change Request', 'labels', 'User');
+
+            this.once('close remove', function () {
+                if (this.$userName) {
+                    this.$userName.popover('destroy');
+                }
+                if (this.$emailAddress) {
+                    this.$emailAddress.popover('destroy');
+                }
+            }, this);
+        },
+
+        afterRender: function () {
+            this.$userName = this.$el.find('input[name="username"]');
+            this.$emailAddress = this.$el.find('input[name="emailAddress"]');
         },
 
         actionSubmit: function () {
-            var $userName = this.$el.find('input[name="username"]');
-            var $emailAddress = this.$el.find('input[name="emailAddress"]');
+            var $userName = this.$userName;
+            var $emailAddress = this.$emailAddress;
 
             var userName = $userName.val();
             var emailAddress = $emailAddress.val();
-
 
             var isValid = true;
 

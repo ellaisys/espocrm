@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -44,6 +44,21 @@ class Note extends \Espo\Core\Acl\Base
             return true;
         }
         return false;
+    }
+
+    public function checkEntityCreate(EntityUser $user, Entity $entity, $data)
+    {
+        if ($entity->get('parentId') && $entity->get('parentType')) {
+            $parent = $this->getEntityManager()->getEntity($entity->get('parentType'), $entity->get('parentId'));
+            if ($parent) {
+                if ($this->getAclManager()->checkEntity($user, $parent, 'stream')) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        return true;
     }
 
     public function checkEntityEdit(EntityUser $user, Entity $entity, $data)

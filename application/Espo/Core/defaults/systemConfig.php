@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -82,6 +82,7 @@ return [
         'systemItems',
         'adminItems',
         'superAdminItems',
+        'superAdminSystemItems',
         'configPath',
         'cachePath',
         'database',
@@ -100,6 +101,7 @@ return [
         'portalUserLimit',
         'stylesheet',
         'userItems',
+        'globalItems',
         'internalSmtpServer',
         'internalSmtpPort',
         'internalSmtpAuth',
@@ -116,6 +118,13 @@ return [
         'requiredMariadbVersion',
         'recommendedMariadbParams',
         'phpExecutablePath',
+        'webSocketDebugMode',
+        'webSocketSslCertificateFile',
+        'webSocketSslCertificateLocalPrivateKey',
+        'webSocketSslCertificatePassphrase',
+        'webSocketSslAllowSelfSigned',
+        'webSocketUseSecureServer',
+        'webSocketPort',
     ],
     'adminItems' => [
         'devMode',
@@ -185,6 +194,11 @@ return [
         'adminNotificationsNewExtensionVersion',
         'leadCaptureAllowOrigin',
         'cronDisabled',
+        'defaultPortalId',
+        'cleanupDeletedRecords',
+        'authTokenPreventConcurrent',
+        'emailParser',
+        'latestVersion',
     ],
     'superAdminItems' => [
         'jobMaxPortion',
@@ -202,12 +216,35 @@ return [
         'maintenanceMode',
         'siteUrl',
         'useWebSocket',
+        'webSocketUrl',
+    ],
+    'superAdminSystemItems' => [
     ],
     'userItems' => [
-        'outboundEmailFromAddress',
-        'outboundEmailFromName',
-        'outboundEmailBccAddress',
-        'integrations',
+
+    ],
+    'globalItems' => [
+        'cacheTimestamp',
+        'language',
+        'isDeveloperMode',
+        'dateFormat',
+        'timeFormat',
+        'timeZone',
+        'decimalMark',
+        'weekStart',
+        'thousandSeparator',
+        'companyLogoId',
+        'applicationName',
+        'jsLibs',
+        'maintenanceMode',
+        'siteUrl',
+        'useCache',
+        'useCacheInDeveloperMode',
+        'isDeveloperMode',
+        'version',
+        'useWebSocket',
+        'webSocketUrl',
+        'aclAllowDeleteCreated',
     ],
     'isInstalled' => false,
     'ldapUserNameAttribute' => 'sAMAccountName',

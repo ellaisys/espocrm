@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -49,6 +49,17 @@ Espo.define('views/user/record/detail', 'views/record/detail', function (Dep) {
                         style: 'default'
                     });
                 }
+            }
+
+            if (
+                (this.model.id == this.getUser().id || this.getUser().isAdmin()) &&
+                (this.model.isRegular() || this.model.isAdmin()) &&
+                this.getConfig().get('auth2FA')
+            ) {
+                this.addButton({
+                    name: 'viewSecurity',
+                    label: 'Security',
+                });
             }
 
             if (
@@ -247,6 +258,15 @@ Espo.define('views/user/record/detail', 'views/record/detail', function (Dep) {
                                 [{"name":"portalRoles"}, {"name":"accounts"}]
                             ]
                         });
+                        if (this.getUser().isAdmin()) {
+                            layout.push({
+                                "label": "Misc",
+                                "name": "portalMisc",
+                                "rows": [
+                                    [{"name":"dashboardTemplate"}, false]
+                                ]
+                            });
+                        }
                     }
                 }
 
@@ -277,7 +297,15 @@ Espo.define('views/user/record/detail', 'views/record/detail', function (Dep) {
                     this.model.set(data);
                 }.bind(this));
             }.bind(this));
-        }
+        },
+
+        actionViewSecurity: function () {
+            this.createView('dialog', 'views/user/modals/security', {
+                userModel: this.model,
+            }, function (view) {
+                view.render();
+            }, this);
+        },
 
     });
 });

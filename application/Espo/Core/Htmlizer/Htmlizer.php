@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -147,6 +147,7 @@ class Htmlizer
             }
 
             $type = $entity->getAttributeType($attribute);
+            $fieldType = $entity->getAttributeParam($attribute, 'fieldType');
 
             if ($type == Entity::DATETIME) {
                 if (!empty($data[$attribute])) {
@@ -192,6 +193,14 @@ class Htmlizer
                 }
             } else if ($type === Entity::PASSWORD) {
                 unset($data[$attribute]);
+            }
+
+            if ($fieldType === 'currency' && $this->metadata) {
+                if ($entity->getAttributeParam($attribute, 'attributeRole') === 'currency') {
+                    if ($currencyValue = $data[$attribute]) {
+                        $data[$attribute . 'Symbol'] = $this->metadata->get(['app', 'currency', 'symbolMap', $currencyValue]);
+                    }
+                }
             }
 
             if (array_key_exists($attribute, $data)) {

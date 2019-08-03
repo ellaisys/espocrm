@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -79,7 +79,8 @@ Espo.define('views/dashlets/abstract/base', 'view', function (Dep) {
             if (!this.options.readOnly) {
                 var storedOptions = this.getPreferences().getDashletOptions(this.id) || {};
             } else {
-                var storedOptions = (this.getConfig().get('dashletsOptions') || {})[this.id] || {};
+                var allOptions = this.getConfig().get('forcedDashletsOptions') || this.getConfig().get('dashletsOptions') || {};
+                var storedOptions = allOptions[this.id] || {};
             }
 
             this.optionsData = _.extend(options, storedOptions);
@@ -150,7 +151,15 @@ Espo.define('views/dashlets/abstract/base', 'view', function (Dep) {
 
         getOption: function (key) {
             return this.optionsData[key];
-        }
+        },
+
+        getTitle: function () {
+            var title = this.getOption('title');
+            if (!title) {
+                title = null;
+            }
+            return title;
+        },
 
     });
 });

@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -85,9 +85,20 @@ class App extends \Espo\Core\Services\Base
 
         $userData = $user->getValueMap();
 
-        $userData->emailAddressList = $this->getEmailAddressList();
+        $emailAddressData = $this->getEmailAddressData();
+
+        $userData->emailAddressList = $emailAddressData->emailAddressList;
+        $userData->userEmailAddressList = $emailAddressData->userEmailAddressList;
 
         $settings = $this->getServiceFactory()->create('Settings')->getConfigData();
+
+        if ($user->get('dashboardTemplateId')) {
+            $dashboardTemplate = $this->getEntityManager()->getEntity('DashboardTemplate', $user->get('dashboardTemplateId'));
+            if ($dashboardTemplate) {
+                $settings->forcedDashletsOptions = $dashboardTemplate->get('dashletsOptions') ?? (object) [];
+                $settings->forcedDashboardLayout = $dashboardTemplate->get('layout') ?? [];
+            }
+        }
 
         unset($userData->authTokenId);
         unset($userData->password);
@@ -110,12 +121,16 @@ class App extends \Espo\Core\Services\Base
         ];
     }
 
-    protected function getEmailAddressList() {
+    protected function getEmailAddressData()
+    {
         $user = $this->getUser();
 
         $emailAddressList = [];
+        $userEmailAddressList = [];
+
         foreach ($user->get('emailAddresses') as $emailAddress) {
             if ($emailAddress->get('invalid')) continue;
+            $userEmailAddressList[] = $emailAddress->get('name');
             if ($user->get('emailAddress') === $emailAddress->get('name')) continue;
             $emailAddressList[] = $emailAddress->get('name');
         }
@@ -162,7 +177,10 @@ class App extends \Espo\Core\Services\Base
             }
         }
 
-        return $emailAddressList;
+        return (object) [
+            'emailAddressList' => $emailAddressList,
+            'userEmailAddressList' => $userEmailAddressList
+        ];
     }
 
     private function getMaxUploadSize()

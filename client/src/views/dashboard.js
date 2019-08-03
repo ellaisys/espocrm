@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@
  * these Appropriate Legal Notices must retain the display of the "EspoCRM" word.
  ************************************************************************/
 
-Espo.define('views/dashboard', ['view', 'lib!gridstack'], function (Dep, Gridstack) {
+define('views/dashboard', ['view', 'lib!gridstack'], function (Dep, Gridstack) {
 
     return Dep.extend({
 
@@ -65,19 +65,25 @@ Espo.define('views/dashboard', ['view', 'lib!gridstack'], function (Dep, Gridsta
 
                         (data.dashboardTabList).forEach(function (name) {
                             var layout = [];
+                            var id = null;
                             this.dashboardLayout.forEach(function (d) {
                                 if (d.name == name) {
                                     layout = d.layout;
+                                    id = d.id;
                                 }
                             }, this);
 
                             if (name in data.renameMap) {
                                 name = data.renameMap[name];
                             }
-                            dashboardLayout.push({
+                            var o = {
                                 name: name,
-                                layout: layout
-                            });
+                                layout: layout,
+                            };
+                            if (id) {
+                                o.id = id;
+                            }
+                            dashboardLayout.push(o);
                         }, this);
 
                         this.dashletIdList.forEach(function (item) {
@@ -107,6 +113,10 @@ Espo.define('views/dashboard', ['view', 'lib!gridstack'], function (Dep, Gridsta
             };
         },
 
+        generateId: function () {
+            return (Math.floor(Math.random() * 10000001)).toString();
+        },
+
         setupCurrentTabLayout: function () {
             if (!this.dashboardLayout) {
                 var defaultLayout = [
@@ -115,7 +125,11 @@ Espo.define('views/dashboard', ['view', 'lib!gridstack'], function (Dep, Gridsta
                         "layout": []
                     }
                 ];
-                if (this.getUser().get('portalId')) {
+
+
+                if (this.getConfig().get('forcedDashboardLayout')) {
+                    this.dashboardLayout = this.getConfig().get('forcedDashboardLayout') || [];
+                } else if (this.getUser().get('portalId')) {
                     this.dashboardLayout = this.getConfig().get('dashboardLayout') || [];
                 } else {
                     this.dashboardLayout = this.getPreferences().get('dashboardLayout') || defaultLayout;
@@ -329,9 +343,13 @@ Espo.define('views/dashboard', ['view', 'lib!gridstack'], function (Dep, Gridsta
             var grid = this.$gridstack.data('gridstack');
             grid.addWidget($item, 0, 0, 2, 2);
 
-            this.createDashletView(id, name, name, function () {
+            this.createDashletView(id, name, name, function (view) {
                 this.fetchLayout();
                 this.saveLayout();
+
+                if (view.getView('body') && view.getView('body').afterAdding) {
+                    view.getView('body').afterAdding.call(view.getView('body'));
+                }
             }, this);
         },
 
@@ -373,4 +391,3 @@ Espo.define('views/dashboard', ['view', 'lib!gridstack'], function (Dep, Gridsta
         }
     });
 });
-

@@ -4,6 +4,7 @@
         "edit":"views/inbound-email/record/edit",
         "list":"views/inbound-email/record/list"
     },
+    "inlineEditDisabled": true,
     "formDependency": {
         "reply": {
             "map": {
@@ -26,6 +27,29 @@
                     "fields": ["replyEmailTemplate"]
                 }
             ]
+        }
+    },
+    "dynamicLogic": {
+        "fields": {
+            "smtpUsername": {
+                "required": {
+                    "conditionGroup": [
+                        {
+                            "type": "and",
+                            "value": [
+                                {
+                                    "type": "isTrue",
+                                    "attribute": "useImap"
+                                },
+                                {
+                                    "type": "isTrue",
+                                    "attribute": "smtpAuth"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
         }
     },
     "searchPanelDisabled": true,

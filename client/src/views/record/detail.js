@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@
  * these Appropriate Legal Notices must retain the display of the "EspoCRM" word.
  ************************************************************************/
 
-Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], function (Dep, ViewRecordHelper) {
+define('views/record/detail', ['views/record/base', 'view-record-helper'], function (Dep, ViewRecordHelper) {
 
     return Dep.extend({
 
@@ -56,7 +56,6 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
             {
                 name: 'edit',
                 label: 'Edit',
-                style: 'primary',
             }
         ],
 
@@ -194,8 +193,8 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
             }
 
             if (this.duplicateAction) {
-                if (this.getAcl().check(this.entityType, 'create')) {
-                    this.dropdownItemList.push({
+                if (this.getAcl().check(this.entityType, 'create') && !this.getMetadata().get(['clientDefs', this.scope, 'duplicateDisabled'])) {
+                    this.addDropdownItem({
                         'label': 'Duplicate',
                         'name': 'duplicate'
                     });
@@ -757,6 +756,7 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
             this.inlineEditDisabled = this.options.inlineEditDisabled || this.inlineEditDisabled;
             this.navigateButtonsDisabled = this.options.navigateButtonsDisabled || this.navigateButtonsDisabled;
             this.portalLayoutDisabled = this.options.portalLayoutDisabled || this.portalLayoutDisabled;
+            this.dynamicLogicDefs = this.options.dynamicLogicDefs || this.dynamicLogicDefs;
 
             this.setupActionItems();
             this.setupBeforeFinal();
@@ -786,10 +786,12 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
                 }
             }, this);
 
-            this.dependencyDefs = _.extend(this.getMetadata().get('clientDefs.' + this.model.name + '.formDependency') || {}, this.dependencyDefs);
+            var dependencyDefs = Espo.Utils.clone(this.getMetadata().get(['clientDefs', this.model.name, 'formDependency']) || {});
+            this.dependencyDefs = _.extend(dependencyDefs, this.dependencyDefs);
             this.initDependancy();
 
-            this.dynamicLogicDefs = _.extend(this.getMetadata().get('clientDefs.' + this.model.name + '.dynamicLogic') || {}, this.dynamicLogicDefs);
+            var dynamicLogic = Espo.Utils.clone(this.getMetadata().get(['clientDefs', this.model.name, 'dynamicLogic']) || {});
+            this.dynamicLogicDefs = _.extend(dynamicLogic, this.dynamicLogicDefs);
             this.initDynamicLogic();
 
             this.setupFieldLevelSecurity();
@@ -845,8 +847,9 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
         },
 
         switchToModelByIndex: function (indexOfRecord) {
-            if (!this.model.collection) return;
-            var model = this.model.collection.at(indexOfRecord);
+            var collection = this.model.collection || this.collection;
+            if (!collection) return;
+            var model = collection.at(indexOfRecord);
             if (!model) {
                 throw new Error("Model is not found in collection by index.");
             }
@@ -865,12 +868,22 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
             this.getRouter().dispatch(scope, 'view', {
                 id: id,
                 model: model,
-                indexOfRecord: indexOfRecord
+                indexOfRecord: indexOfRecord,
+                rootUrl: this.options.rootUrl,
             });
         },
 
         actionPrevious: function () {
-            if (!this.model.collection) return;
+            var collection;
+            if (!this.model.collection) {
+                collection = this.collection;
+                if (!collection) return;
+                this.indexOfRecord--;
+                if (this.indexOfRecord < 0) this.indexOfRecord = 0;
+            } else {
+                collection = this.model.collection;
+            }
+
             if (!(this.indexOfRecord > 0)) return;
 
             var indexOfRecord = this.indexOfRecord - 1;
@@ -878,13 +891,18 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
         },
 
         actionNext: function () {
-            if (!this.model.collection) return;
-            if (!(this.indexOfRecord < this.model.collection.total - 1) && this.model.collection.total >= 0) return;
-            if (this.model.collection.total === -2 && this.indexOfRecord >= this.model.collection.length - 1) {
-                return;
+            var collection;
+            if (!this.model.collection) {
+                collection = this.collection;
+                if (!collection) return;
+                this.indexOfRecord--;
+                if (this.indexOfRecord < 0) this.indexOfRecord = 0;
+            } else {
+                collection = this.model.collection;
             }
 
-            var collection = this.model.collection;
+            if (!(this.indexOfRecord < collection.total - 1) && collection.total >= 0) return;
+            if (collection.total === -2 && this.indexOfRecord >= collection.length - 1) return;
 
             var indexOfRecord = this.indexOfRecord + 1;
             if (indexOfRecord <= collection.length - 1) {
@@ -1313,6 +1331,10 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
                             options: o
                         };
 
+                        if ('labelText' in cellDefs) {
+                            o.labelText = cellDefs.labelText;
+                            cell.customLabel = cellDefs.labelText;
+                        }
                         if ('customLabel' in cellDefs) {
                             cell.customLabel = cellDefs.customLabel;
                         }
@@ -1354,6 +1376,10 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
             }
 
             this._helper.layoutManager.get(this.model.name, this.layoutName, function (simpleLayout) {
+                if (typeof this.modifyDetailLayout == 'function') {
+                    var simpleLayout = Espo.Utils.cloneDeep(simpleLayout);
+                    this.modifyDetailLayout(simpleLayout);
+                }
                 this.gridLayout = {
                     type: gridLayoutType,
                     layout: this.convertDetailLayout(simpleLayout)
@@ -1428,11 +1454,11 @@ Espo.define('views/record/detail', ['views/record/base', 'view-record-helper'], 
         exitAfterCreate: function () {
             if (this.model.id) {
                 var url = '#' + this.scope + '/view/' + this.model.id;
-
                 this.getRouter().navigate(url, {trigger: false});
                 this.getRouter().dispatch(this.scope, 'view', {
                     id: this.model.id,
-                    rootUrl: this.options.rootUrl
+                    rootUrl: this.options.rootUrl,
+                    model: this.model,
                 });
                 return true;
             }

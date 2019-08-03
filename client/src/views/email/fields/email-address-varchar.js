@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +25,7 @@
  * In accordance with Section 7(b) of the GNU General Public License version 3,
  * these Appropriate Legal Notices must retain the display of the "EspoCRM" word.
  ************************************************************************/
+
 Espo.define('views/email/fields/email-address-varchar', ['views/fields/varchar', 'views/email/fields/from-address-varchar'], function (Dep, From) {
 
     return Dep.extend({
@@ -157,8 +158,8 @@ Espo.define('views/email/fields/email-address-varchar', ['views/fields/varchar',
                     autoSelectFirst: true,
                     triggerSelectOnValidInput: false,
                     formatResult: function (suggestion) {
-                        return suggestion.name + ' &#60;' + suggestion.id + '&#62;';
-                    },
+                        return this.getHelper().escapeString(suggestion.name) + ' &#60;' + this.getHelper().escapeString(suggestion.id) + '&#62;';
+                    }.bind(this),
                     transformResult: function (response) {
                         var response = JSON.parse(response);
                         var list = [];
@@ -202,6 +203,10 @@ Espo.define('views/email/fields/email-address-varchar', ['views/fields/varchar',
         },
 
         addAddress: function (address, name, type, id) {
+            if (name) {
+                name = this.getHelper().escapeString(name);
+            }
+
             if (this.justAddedAddress) {
                 this.deleteAddress(this.justAddedAddress);
             }
@@ -235,6 +240,13 @@ Espo.define('views/email/fields/email-address-varchar', ['views/fields/varchar',
         },
 
         addAddressHtml: function (address, name) {
+            if (name) {
+                name = this.getHelper().escapeString(name);
+            }
+            if (address) {
+                address = this.getHelper().escapeString(address);
+            }
+
             var conteiner = this.$el.find('.link-container');
             var html =
             '<div data-address="'+address+'" class="list-group-item">' +
@@ -286,6 +298,10 @@ Espo.define('views/email/fields/email-address-varchar', ['views/fields/varchar',
             var id = this.idHash[address] || null;
 
             var addressHtml = '<span>' + address + '</span>';
+
+            if (name) {
+                name = this.getHelper().escapeString(name);
+            }
 
             var lineHtml;
             if (id) {

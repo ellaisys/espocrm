@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -56,7 +56,7 @@ define('session-storage', ['storage'], function (Dep) {
         },
 
         set: function (name, value) {
-            if (value instanceof Object || Array.isArray(value)) {
+            if (value instanceof Object || Array.isArray(value) || value === true || value === false) {
                 value = '__JSON__:' + JSON.stringify(value);
             }
             try {
@@ -64,6 +64,10 @@ define('session-storage', ['storage'], function (Dep) {
             } catch (error) {
                 console.error(error);
             }
+        },
+
+        has: function (name) {
+            return this.storageObject.getItem(name) !== null;
         },
 
         clear: function (name) {

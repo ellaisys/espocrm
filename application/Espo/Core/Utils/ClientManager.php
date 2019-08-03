@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -98,19 +98,45 @@ class ClientManager
 
         if ($isDeveloperMode) {
             $useCache = $this->getConfig()->get('useCacheInDeveloperMode');
-            $jsFileList = $this->getMetadata()->get(['app', 'client', 'developerModeScriptList']);
+            $jsFileList = $this->getMetadata()->get(['app', 'client', 'developerModeScriptList'], []);
             $loaderCacheTimestamp = 'null';
         } else {
             $useCache = $this->getConfig()->get('useCache');
-            $jsFileList = $this->getMetadata()->get(['app', 'client', 'scriptList']);
+            $jsFileList = $this->getMetadata()->get(['app', 'client', 'scriptList'], []);
             $loaderCacheTimestamp = $cacheTimestamp;
         }
+
+        $cssFileList = $this->getMetadata()->get(['app', 'client', 'cssList'], []);
+
+        $linkList = $this->getMetadata()->get(['app', 'client', 'linkList'], []);
 
         $scriptsHtml = '';
         foreach ($jsFileList as $jsFile) {
             $src = $this->basePath . $jsFile . '?r=' . $cacheTimestamp;
-            $scriptsHtml .= '        ' .
-            '<script type="text/javascript" src="'.$src.'" data-base-path="'.$this->basePath.'"></script>' . "\n";
+            $scriptsHtml .= "\n        " .
+                "<script type=\"text/javascript\" src=\"{$src}\" data-base-path=\"{$this->basePath}\"></script>";
+        }
+
+        $additionalStyleSheetsHtml = '';
+        foreach ($cssFileList as $cssFile) {
+            $src = $this->basePath . $cssFile . '?r=' . $cacheTimestamp;
+            $additionalStyleSheetsHtml .= "\n        <link rel=\"stylesheet\" href=\"{$src}\">";
+        }
+
+        $linksHtml = '';
+        foreach ($linkList as $item) {
+            $href = $this->basePath . $item['href'];
+            if (empty($item['noTimestamp'])) {
+                $href .= '?r=' . $cacheTimestamp;
+            }
+            $as = $item['as'] ?? '';
+            $rel = $item['rel'] ?? '';
+            $type = $item['type'] ?? '';
+            $additinalPlaceholder = '';
+            if (!empty($item['crossorigin'])) {
+                $additinalPlaceholder .= ' crossorigin';
+            }
+            $linksHtml .= "\n        <link rel=\"{$rel}\" href=\"{$href}\" as=\"{$as}\" as=\"{$type}\"{$additinalPlaceholder}>";
         }
 
         $data = [
@@ -124,7 +150,9 @@ class ClientManager
             'basePath' => $this->basePath,
             'useCache' => $useCache ? 'true' : 'false',
             'appClientClassName' => 'app',
-            'scriptsHtml' => $scriptsHtml
+            'scriptsHtml' => $scriptsHtml,
+            'additionalStyleSheetsHtml' => $additionalStyleSheetsHtml,
+            'linksHtml' => $linksHtml,
         ];
 
         $html = file_get_contents($htmlFilePath);

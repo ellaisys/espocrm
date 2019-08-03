@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -49,7 +49,7 @@ class LastViewed extends \Espo\Core\Services\Base
         $scopes = $this->getInjection('metadata')->get('scopes');
 
         $targetTypeList = array_filter(array_keys($scopes), function ($item) use ($scopes) {
-            return !empty($scopes[$item]['object']);
+            return !empty($scopes[$item]['object']) || !empty($scopes[$item]['lastViewed']);
         });
 
         $offset = $params['offset'];

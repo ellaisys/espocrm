@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -99,8 +99,8 @@ Espo.define('views/fields/user', 'views/fields/link', function (Dep) {
                     paramName: 'q',
                     noCache: true,
                     formatResult: function (suggestion) {
-                        return suggestion.name;
-                    },
+                        return this.getHelper().escapeString(suggestion.name);
+                    }.bind(this),
                     transformResult: function (response) {
                         var response = JSON.parse(response);
                         var list = [];
@@ -123,7 +123,6 @@ Espo.define('views/fields/user', 'views/fields/link', function (Dep) {
                 });
 
                 $elemeneTeams.attr('autocomplete', 'espo-' + this.name);
-
 
                 this.once('render', function () {
                     $elemeneTeams.autocomplete('dispose');
@@ -199,4 +198,3 @@ Espo.define('views/fields/user', 'views/fields/link', function (Dep) {
 
     });
 });
-

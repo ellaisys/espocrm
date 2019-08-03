@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -83,6 +83,8 @@ Espo.define('views/email-template/fields/insert-field', 'views/fields/base', fun
                         var foreignScope = links[link].entity;
                         if (!foreignScope) return;
 
+                        if (links[link].disabled) return;
+
                         if (
                             this.getMetadata().get(['entityAcl', scope, 'links', link, 'onlyAdmin'])
                             ||
@@ -123,6 +125,8 @@ Espo.define('views/email-template/fields/insert-field', 'views/fields/base', fun
             fieldList.forEach(function (field) {
                 var fieldType = this.getMetadata().get(['entityDefs', scope, 'fields', field, 'type']);
                 if (this.getMetadata().get(['entityDefs', scope, 'fields', field, 'disabled'])) return;
+                if (this.getMetadata().get(['entityDefs', scope, 'fields', field, 'directAccessDisabled'])) return;
+
                 if (fieldType === 'map') return;
                 if (fieldType === 'linkMultiple') return;
                 if (fieldType === 'attachmentMultiple') return;
@@ -268,7 +272,5 @@ Espo.define('views/email-template/fields/insert-field', 'views/fields/base', fun
                 field: field
             });
         }
-
     });
-
 });

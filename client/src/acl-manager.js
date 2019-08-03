@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -95,7 +95,7 @@ define('acl-manager', ['acl'], function (Acl) {
 
         getLevel: function (scope, action) {
             if (!(scope in this.data.table)) return;
-            if (!(action in this.data.table[scope])) return;
+            if (typeof this.data.table[scope] !== 'object' || !(action in this.data.table[scope])) return;
 
             return this.data.table[scope][action];
         },

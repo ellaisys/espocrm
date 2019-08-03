@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,7 +40,7 @@ Espo.define('views/admin/field-manager/fields/options-with-style', 'views/admin/
             this.events['click [data-action="selectOptionItemStyle"]'] = function (e) {
                 var $target = $(e.currentTarget);
                 var style = $target.data('style');
-                var value = $target.data('value');
+                var value = $target.data('value').toString();
 
                 this.changeStyle(value, style);
             };
@@ -95,7 +95,7 @@ Espo.define('views/admin/field-manager/fields/options-with-style', 'views/admin/
                     }
                 }
                 var translated = this.getLanguage().translateOption(item, 'style', 'LayoutManager');
-                var innerHtml = '<span class="check-icon fas fa-check pull-right'+hiddenPart+'"></span><div>'+translated+'</div>';
+                var innerHtml = '<span class="check-icon fas fa-check pull-right'+hiddenPart+'"></span><div class="text-'+item+'">'+translated+'</div>';
                 itemListHtml += '<li><a href="javascript:" data-action="selectOptionItemStyle" data-style="'+item+'" data-value="'+valueInternal+'">'+innerHtml+'</a></li>'
             }, this);
 

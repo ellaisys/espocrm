@@ -4,7 +4,7 @@
  *
  * EspoCRM - Open Source CRM application.
  * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -195,6 +195,9 @@ class NamespaceLoader
 
             if (file_exists($this->vendorNamespacesCacheFile) && $this->getConfig()->get('useCache')) {
                 $this->vendorNamespaces = $this->getFileManager()->getPhpContents($this->vendorNamespacesCacheFile);
+                if (!is_array($this->vendorNamespaces)) {
+                    $this->vendorNamespaces = [];
+                }
             }
         }
 

@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -222,6 +222,7 @@ Espo.define('views/fields/base', 'view', function (Dep) {
             return this.mode === 'search';
         },
 
+
         setMode: function (mode) {
             this.mode = mode;
             var property = mode + 'Template';
@@ -229,6 +230,18 @@ Espo.define('views/fields/base', 'view', function (Dep) {
                 this[property] = 'fields/' + Espo.Utils.camelCaseToHyphen(this.type) + '/' + this.mode;
             }
             this.template = this[property];
+
+            var contentProperty = mode + 'TemplateContent';
+
+            if (!this._template) {
+                this._templateCompiled = null;
+                if (contentProperty in this) {
+                    this.compiledTemplatesCache = this.compiledTemplatesCache || {};
+                    this._templateCompiled =
+                    this.compiledTemplatesCache[contentProperty] =
+                        this.compiledTemplatesCache[contentProperty] || this._templator.compileTemplate(this[contentProperty]);
+                }
+            }
         },
 
         init: function () {
@@ -596,7 +609,7 @@ Espo.define('views/fields/base', 'view', function (Dep) {
         showValidationMessage: function (message, target) {
             var $el;
 
-            target = target || '.main-element';
+            target = target || this.validationElementSelector || '.main-element';
 
             if (typeof target === 'string' || target instanceof String) {
                 $el = this.$el.find(target);

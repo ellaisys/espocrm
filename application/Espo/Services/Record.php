@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,7 +36,8 @@ use \Espo\Core\Exceptions\Forbidden;
 use \Espo\Core\Exceptions\BadRequest;
 use \Espo\Core\Exceptions\Conflict;
 use \Espo\Core\Exceptions\NotFound;
-
+use \Espo\Core\Exceptions\NotFoundSilent;
+use \Espo\Core\Exceptions\ForbiddenSilent;
 
 use \Espo\Core\Utils\Util;
 
@@ -88,6 +89,8 @@ class Record extends \Espo\Core\Services\Base
 
     protected $onlyAdminLinkList = [];
 
+    protected $linkParams = [];
+
     protected $linkSelectParams = [];
 
     protected $noEditAccessRequiredLinkList = [];
@@ -121,6 +124,10 @@ class Record extends \Espo\Core\Services\Base
     protected $validateSkipFieldList = [];
 
     protected $findDuplicatesSelectAttributeList = ['id', 'name'];
+
+    protected $duplicateIgnoreFieldList = [];
+
+    protected $duplicateIgnoreAttributeList = [];
 
     const MAX_SELECT_TEXT_ATTRIBUTE_LENGTH = 5000;
 
@@ -278,7 +285,7 @@ class Record extends \Espo\Core\Services\Base
         }
         $entity = $this->getEntity($id);
 
-        if (!$entity) throw new NotFound();
+        if (!$entity) throw new NotFoundSilent("Record does not exist.");
 
         $this->processActionHistoryRecord('read', $entity);
 
@@ -299,11 +306,7 @@ class Record extends \Espo\Core\Services\Base
 
         if ($entity && !is_null($id)) {
             $this->loadAdditionalFields($entity);
-
-            if (!$this->getAcl()->check($entity, 'read')) {
-                throw new Forbidden();
-            }
-
+            if (!$this->getAcl()->check($entity, 'read')) throw new ForbiddenSilent();
             $this->prepareEntityForOutput($entity);
         }
 
@@ -417,6 +420,8 @@ class Record extends \Espo\Core\Services\Base
                                 ->findOne();
                             if ($foreignEntity) {
                                 $entity->set($nameAttribute, $foreignEntity->get('name'));
+                            } else {
+                                $entity->set($nameAttribute, null);
                             }
                         }
                     }
@@ -800,9 +805,16 @@ class Record extends \Espo\Core\Services\Base
         }
     }
 
+    protected function filterCreateInput($data)
+    {
+    }
+
+    protected function filterUpdateInput($data)
+    {
+    }
+
     protected function handleInput($data)
     {
-
     }
 
     protected function processDuplicateCheck(Entity $entity, $data)
@@ -871,17 +883,15 @@ class Record extends \Espo\Core\Services\Base
 
     public function create($data)
     {
-        if (!$this->getAcl()->check($this->getEntityType(), 'create')) {
-            throw new Forbidden();
-        }
+        if (!$this->getAcl()->check($this->getEntityType(), 'create')) throw new ForbiddenSilent();
 
         $entity = $this->getRepository()->get();
 
         $this->filterInput($data);
+        $this->filterCreateInput($data);
         $this->handleInput($data);
 
         unset($data->id);
-
         unset($data->modifiedById);
         unset($data->modifiedByName);
         unset($data->modifiedAt);
@@ -891,29 +901,24 @@ class Record extends \Espo\Core\Services\Base
 
         $entity->set($data);
 
-        if (!$this->getAcl()->check($entity, 'create')) {
-            throw new Forbidden();
-        }
-
         $this->populateDefaults($entity, $data);
+
+        if (!$this->getAcl()->check($entity, 'create')) throw new ForbiddenSilent();
 
         $this->processValidation($entity, $data);
 
-        $this->beforeCreateEntity($entity, $data);
-
-        if (!$this->checkAssignment($entity)) {
-            throw new Forbidden('Assignment permission failure');
-        }
+        if (!$this->checkAssignment($entity)) throw new Forbidden('Assignment permission failure.');
 
         $this->processDuplicateCheck($entity, $data);
+
+        $this->beforeCreateEntity($entity, $data);
 
         if ($this->storeEntity($entity)) {
             $this->afterCreateEntity($entity, $data);
             $this->afterCreateProcessDuplicating($entity, $data);
+            $this->loadAdditionalFields($entity);
             $this->prepareEntityForOutput($entity);
-
             $this->processActionHistoryRecord('create', $entity);
-
             return $entity;
         }
 
@@ -929,15 +934,13 @@ class Record extends \Espo\Core\Services\Base
     {
         unset($data->deleted);
 
-        if (empty($id)) {
-            throw new BadRequest();
-        }
+        if (empty($id)) throw new BadRequest();
 
         $this->filterInput($data);
+        $this->filterUpdateInput($data);
         $this->handleInput($data);
 
         unset($data->id);
-
         unset($data->modifiedById);
         unset($data->modifiedByName);
         unset($data->modifiedAt);
@@ -951,23 +954,17 @@ class Record extends \Espo\Core\Services\Base
             $entity = $this->getRepository()->get($id);
         }
 
-        if (!$entity) {
-            throw new NotFound();
-        }
+        if (!$entity) throw new NotFound();
 
-        if (!$this->getAcl()->check($entity, 'edit')) {
-            throw new Forbidden();
-        }
+        if (!$this->getAcl()->check($entity, 'edit')) throw new ForbiddenSilent();
 
         $entity->set($data);
 
         $this->processValidation($entity, $data);
 
-        $this->beforeUpdateEntity($entity, $data);
+        if (!$this->checkAssignment($entity)) throw new Forbidden("Assignment permission failure.");
 
-        if (!$this->checkAssignment($entity)) {
-            throw new Forbidden();
-        }
+        $this->beforeUpdateEntity($entity, $data);
 
         if ($this->checkForDuplicatesInUpdate) {
             $this->processDuplicateCheck($entity, $data);
@@ -976,9 +973,7 @@ class Record extends \Espo\Core\Services\Base
         if ($this->storeEntity($entity)) {
             $this->afterUpdateEntity($entity, $data);
             $this->prepareEntityForOutput($entity);
-
             $this->processActionHistoryRecord('update', $entity);
-
             return $entity;
         }
 
@@ -1024,19 +1019,13 @@ class Record extends \Espo\Core\Services\Base
 
     public function delete($id)
     {
-        if (empty($id)) {
-            throw new BadRequest();
-        }
+        if (empty($id)) throw new BadRequest();
 
         $entity = $this->getRepository()->get($id);
 
-        if (!$entity) {
-            throw new NotFound();
-        }
+        if (!$entity) throw new NotFound();
 
-        if (!$this->getAcl()->check($entity, 'delete')) {
-            throw new Forbidden();
-        }
+        if (!$this->getAcl()->check($entity, 'delete')) throw new ForbiddenSilent();
 
         $this->beforeDeleteEntity($entity);
 
@@ -1306,8 +1295,13 @@ class Record extends \Espo\Core\Services\Base
 
         $foreignEntityName = $entity->relations[$link]['entity'];
 
-        if (!$this->getAcl()->check($foreignEntityName, 'read')) {
-            throw new Forbidden();
+        $linkParams = $this->linkParams[$link] ?? [];
+        $skipAcl = $linkParams['skipAcl'] ?? false;
+
+        if (!$skipAcl) {
+            if (!$this->getAcl()->check($foreignEntityName, 'read')) {
+                throw new Forbidden();
+            }
         }
 
         $recordService = $this->getRecordService($foreignEntityName);
@@ -1327,10 +1321,15 @@ class Record extends \Espo\Core\Services\Base
             }
         }
 
-        $selectParams = $this->getSelectManager($foreignEntityName)->getSelectParams($params, true, true);
+        $selectParams = $this->getSelectManager($foreignEntityName)->getSelectParams($params, !$skipAcl, true);
 
         if (array_key_exists($link, $this->linkSelectParams)) {
             $selectParams = array_merge($selectParams, $this->linkSelectParams[$link]);
+        }
+
+        $additionalSelectParams = $this->getMetadata()->get(['entityDefs', $this->entityType, 'links', $link, 'selectParams']);
+        if ($additionalSelectParams) {
+            $selectParams = array_merge($selectParams, $additionalSelectParams);
         }
 
         $selectParams['maxTextColumnsLength'] = $recordService->getMaxSelectTextAttributeLength();
@@ -2426,21 +2425,21 @@ class Record extends \Espo\Core\Services\Base
         $attributes = $entity->getValueMap();
         unset($attributes->id);
 
-        $fields = $this->getMetadata()->get(['entityDefs', $this->getEntityType(), 'fields'], array());
+        $fields = $this->getMetadata()->get(['entityDefs', $this->getEntityType(), 'fields'], []);
 
         $fieldManager = new \Espo\Core\Utils\FieldManagerUtil($this->getMetadata());
 
         foreach ($fields as $field => $item) {
-            if (empty($item['type'])) continue;
-            $type = $item['type'];
-
-            if (!empty($item['duplicateIgnore'])) {
+            if (!empty($item['duplicateIgnore']) || in_array($field, $this->duplicateIgnoreFieldList)) {
                 $attributeToIgnoreList = $fieldManager->getAttributeList($this->entityType, $field);
                 foreach ($attributeToIgnoreList as $attribute) {
                     unset($attributes->$attribute);
                 }
                 continue;
             }
+
+            if (empty($item['type'])) continue;
+            $type = $item['type'];
 
             if (in_array($type, ['file', 'image'])) {
                 $attachment = $entity->get($field);
@@ -2481,6 +2480,10 @@ class Record extends \Espo\Core\Services\Base
                     }
                 }
             }
+        }
+
+        foreach ($this->duplicateIgnoreAttributeList as $attribute) {
+            unset($attributes->$attribute);
         }
 
         $attributes->_duplicatingEntityId = $id;

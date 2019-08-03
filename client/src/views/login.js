@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@
  * these Appropriate Legal Notices must retain the display of the "EspoCRM" word.
  ************************************************************************/
 
-Espo.define('views/login', 'view', function (Dep) {
+define('views/login', 'view', function (Dep) {
 
     return Dep.extend({
 
@@ -64,78 +64,84 @@ Espo.define('views/login', 'view', function (Dep) {
         },
 
         login: function () {
-                var userName = $('#field-userName').val();
-                var trimmedUserName = userName.trim();
-                if (trimmedUserName !== userName) {
-                    $('#field-userName').val(trimmedUserName);
-                    userName = trimmedUserName;
-                }
+            var userName = $('#field-userName').val();
+            var trimmedUserName = userName.trim();
+            if (trimmedUserName !== userName) {
+                $('#field-userName').val(trimmedUserName);
+                userName = trimmedUserName;
+            }
 
-                var password = $('#field-password').val();
+            var password = $('#field-password').val();
 
-                var $submit = this.$el.find('#btn-login');
+            var $submit = this.$el.find('#btn-login');
 
-                if (userName == '') {
+            if (userName == '') {
 
-                    this.isPopoverDestroyed = false;
-                    var $el = $("#field-userName");
+                this.isPopoverDestroyed = false;
+                var $el = $("#field-userName");
 
-                    var message = this.getLanguage().translate('userCantBeEmpty', 'messages', 'User');
+                var message = this.getLanguage().translate('userCantBeEmpty', 'messages', 'User');
 
-                    $el.popover({
-                        placement: 'bottom',
-                        container: 'body',
-                        content: message,
-                        trigger: 'manual',
-                    }).popover('show');
+                $el.popover({
+                    placement: 'bottom',
+                    container: 'body',
+                    content: message,
+                    trigger: 'manual',
+                }).popover('show');
 
-                    var $cell = $el.closest('.form-group');
-                    $cell.addClass('has-error');
-                    $el.one('mousedown click', function () {
-                        $cell.removeClass('has-error');
-                        if (this.isPopoverDestroyed) return;
-                        $el.popover('destroy');
-                        this.isPopoverDestroyed = true;
-                    }.bind(this));
-                    return;
-                }
+                var $cell = $el.closest('.form-group');
+                $cell.addClass('has-error');
+                $el.one('mousedown click', function () {
+                    $cell.removeClass('has-error');
+                    if (this.isPopoverDestroyed) return;
+                    $el.popover('destroy');
+                    this.isPopoverDestroyed = true;
+                }.bind(this));
+                return;
+            }
 
-                $submit.addClass('disabled').attr('disabled', 'disabled');
+            $submit.addClass('disabled').attr('disabled', 'disabled');
 
-                this.notify('Please wait...');
+            Espo.Ui.notify(this.translate('pleaseWait', 'messages'));
 
-                $.ajax({
-                    url: 'App/user',
-                    headers: {
-                        'Authorization': 'Basic ' + Base64.encode(userName  + ':' + password),
-                        'Espo-Authorization': Base64.encode(userName + ':' + password),
-                        'Espo-Authorization-By-Token': false
-                    },
-                    success: function (data) {
-                        this.notify(false);
-                        this.trigger('login', {
-                            auth: {
-                                userName: userName,
-                                token: data.token
-                            },
-                            user: data.user,
-                            preferences: data.preferences,
-                            acl: data.acl,
-                            settings: data.settings,
-                            appParams: data.appParams
-                        });
-                    }.bind(this),
-                    error: function (xhr) {
-                        $submit.removeClass('disabled').removeAttr('disabled');
-                        if (xhr.status == 401) {
-                            this.onWrong();
+            Espo.Ajax.getRequest('App/user', null, {
+                login: true,
+                headers: {
+                    'Authorization': 'Basic ' + Base64.encode(userName  + ':' + password),
+                    'Espo-Authorization': Base64.encode(userName + ':' + password),
+                    'Espo-Authorization-By-Token': false,
+                },
+            }).then(
+                function (data) {
+                    this.notify(false);
+                    this.trigger('login', userName, data);
+                }.bind(this)
+            ).fail(
+                function (xhr) {
+                    $submit.removeClass('disabled').removeAttr('disabled');
+                    if (xhr.status == 401) {
+                        var data = xhr.responseJSON || {};
+                        var statusReason = xhr.getResponseHeader('X-Status-Reason');
+
+                        if (statusReason === 'second-step-required') {
+                            xhr.errorIsHandled = true;
+                            this.onSecondStepRequired(userName, password, data);
+                            return;
                         }
-                    }.bind(this),
-                    login: true,
-                });
+
+                        this.onWrongCredentials();
+                    }
+                }.bind(this)
+            );
         },
 
-        onWrong: function () {
+        onSecondStepRequired: function (userName, password, data) {
+            var view = data.view || 'views/login-second-step';
+
+            this.trigger('redirect', view, userName, password, data);
+        },
+
+        onWrongCredentials: function () {
             var cell = $('#login .form-group');
             cell.addClass('has-error');
             this.$el.one('mousedown click', function () {
@@ -145,14 +151,13 @@ Espo.define('views/login', 'view', function (Dep) {
         },
 
         showPasswordChangeRequest: function () {
-            this.notify('Please wait...');
+            Espo.Ui.notify(this.translate('pleaseWait', 'messages'));
             this.createView('passwordChangeRequest', 'views/modals/password-change-request', {
                 url: window.location.href
             }, function (view) {
                 view.render();
-                view.notify(false);
+                Espo.Ui.notify(false);
             });
         }
     });
-
 });

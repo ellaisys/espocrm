@@ -23,7 +23,7 @@
         {{/if}}
         <div class="btn-group">
             {{#if dropdownItemList.length}}
-            <button type="button" class="btn btn-default dropdown-toggle dropdown-item-list-button" data-toggle="dropdown">
+            <button type="button" class="btn btn-text dropdown-toggle dropdown-item-list-button" data-toggle="dropdown">
                 <span class="fas fa-ellipsis-h"></span>
             </button>
             <ul class="dropdown-menu pull-left">
@@ -112,16 +112,10 @@
                 {{/if}}
                 {{#each headerDefs}}
                 <th {{#if width}} width="{{width}}"{{/if}}{{#if align}} style="text-align: {{align}};"{{/if}}>
-                    {{#if this.sortable}}
-                        <a href="javascript:" class="sort" data-name="{{this.name}}">{{#if this.hasCustomLabel}}{{this.customLabel}}{{else}}{{translate this.name scope=../../../collection.name category='fields'}}{{/if}}</a>
-                        {{#if this.sorted}}{{#if this.asc}}<span class="fas fa-chevron-down fa-sm"></span>{{else}}<span class="fas fa-chevron-up fa-sm"></span>{{/if}}{{/if}}
-                    {{else}}
-                        {{#if this.hasCustomLabel}}
-                            {{this.customLabel}}
-                        {{else}}
-                            {{translate this.name scope=../../../collection.name category='fields'}}
-                        {{/if}}
-                    {{/if}}
+                    {{#if this.isSortable}}
+                        <a href="javascript:" class="sort" data-name="{{this.name}}">{{label}}</a>
+                        {{#if this.isSorted}}{{#unless this.isDesc}}<span class="fas fa-chevron-down fa-sm"></span>{{else}}<span class="fas fa-chevron-up fa-sm"></span>{{/unless}}{{/if}}
+                    {{else}}{{label}}{{/if}}
                 </th>
                 {{/each}}
             </tr>

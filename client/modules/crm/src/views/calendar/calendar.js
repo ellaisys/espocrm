@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -61,26 +61,11 @@ Espo.define('crm:views/calendar/calendar', ['view', 'lib!full-calendar'], functi
         },
 
         data: function () {
-            var scopeFilterList = Espo.Utils.clone(this.scopeList);
-            scopeFilterList.unshift('all');
-
-            var scopeFilterDataList = [];
-            this.scopeList.forEach(function (scope) {
-                var o = {scope: scope};
-                if (!~this.enabledScopeList.indexOf(scope)) {
-                    o.disabled = true;
-                }
-                scopeFilterDataList.push(o);
-            }, this);
-
             return {
                 mode: this.mode,
-                modeDataList: this.getModeDataList(),
                 header: this.header,
-                scopeFilterDataList: scopeFilterDataList,
                 isCustomViewAvailable: this.isCustomViewAvailable,
-                viewDataList: this.getViewDataList(),
-                isCustomView: this.isCustomView
+                isCustomView: this.isCustomView,
             };
         },
 
@@ -163,6 +148,16 @@ Espo.define('crm:views/calendar/calendar', ['view', 'lib!full-calendar'], functi
             if (Object.prototype.toString.call(this.enabledScopeList) !== '[object Array]') {
                 this.enabledScopeList = [];
             }
+
+            if (this.header) {
+                this.createView('modeButtons', 'crm:views/calendar/mode-buttons', {
+                    el: this.getSelector() + ' .mode-buttons',
+                    isCustomViewAvailable: this.isCustomViewAvailable,
+                    modeList: this.modeList,
+                    scopeList: this.scopeList,
+                    mode: this.mode,
+                });
+            }
         },
 
         setupMode: function () {
@@ -204,7 +199,9 @@ Espo.define('crm:views/calendar/calendar', ['view', 'lib!full-calendar'], functi
                 }
 
                 this.mode = mode;
+
                 this.setupMode();
+
                 if (this.isCustomView) {
                     this.$el.find('button[data-action="editCustomView"]').removeClass('hidden');
                 } else {
@@ -212,20 +209,18 @@ Espo.define('crm:views/calendar/calendar', ['view', 'lib!full-calendar'], functi
                 }
                 this.$el.find('[data-action="mode"]').removeClass('active');
                 this.$el.find('[data-mode="' + mode + '"]').addClass('active');
+
+
                 this.$calendar.fullCalendar('changeView', this.viewMode);
 
                 this.updateDate();
+
+                if (this.hasView('modeButtons')) {
+                    this.getView('modeButtons').mode = mode;
+                    this.getView('modeButtons').reRender();
+                }
             }
             this.trigger('change:mode', mode);
-        },
-
-        getViewDataList: function () {
-            var dataList = this.getPreferences().get('calendarViewDataList') || [];
-            dataList = Espo.Utils.cloneDeep(dataList);
-            dataList.forEach(function (item) {
-                item.mode = 'view-' + item.id;
-            }, this);
-            return dataList;
         },
 
         toggleScopeFilter: function (name) {
@@ -239,18 +234,6 @@ Espo.define('crm:views/calendar/calendar', ['view', 'lib!full-calendar'], functi
             this.storeEnabledScopeList(this.enabledScopeList);
 
             this.$calendar.fullCalendar('refetchEvents');
-        },
-
-        getModeDataList: function () {
-            var list = [];
-            this.modeList.forEach(function (name) {
-                var o = {
-                    name: name,
-                    labelShort: this.translate(name, 'modes', 'Calendar').substr(0, 2)
-                };
-                list.push(o);
-            }, this);
-            return list;
         },
 
         getStoredEnabledScopeList: function () {
@@ -303,6 +286,8 @@ Espo.define('crm:views/calendar/calendar', ['view', 'lib!full-calendar'], functi
             if (this.options.userId && this.options.userName) {
                 title += ' (' + this.options.userName + ')';
             }
+
+            title = this.getHelper().escapeString(title);
 
             return title;
         },
@@ -380,9 +365,9 @@ Espo.define('crm:views/calendar/calendar', ['view', 'lib!full-calendar'], functi
 
         handleStatus: function (event) {
         	if (~this.canceledStatusList.indexOf(event.status)) {
-        		event.className = 'event-canceled';
+                event.className = ['event-canceled'];
         	} else {
-                event.className = '';
+                event.className = [];
             }
         },
 
@@ -466,16 +451,26 @@ Espo.define('crm:views/calendar/calendar', ['view', 'lib!full-calendar'], functi
         },
 
         getCalculatedHeight: function () {
+            var smallScreenWidth = this.smallScreenWidth = this.smallScreenWidth || this.getThemeManager().getParam('screenWidthXs');
+
             if (this.$container && this.$container.length) {
                 return this.$container.height();
             }
-            var height = $(window).height();
-            var width = $(window).width();
-            var spaceHeight = 150;
-            if (width < 768) {
-                spaceHeight = 164;
+
+            var footerHeight = this.footerHeight = this.footerHeight || $('#footer').height() || 26;
+
+            var top = 0;
+            if (this.$el.find('.calendar').get(0)) {
+                top = this.$el.find('.calendar').get(0).getBoundingClientRect().top;
             }
-            return $(window).height() - spaceHeight;
+
+            var spaceHeight = top + footerHeight;
+
+            if ($(window).width() < smallScreenWidth) {
+                spaceHeight -= 20;
+            }
+
+            return $(window).height() - spaceHeight - 20;
         },
 
         adjustSize: function () {
@@ -703,7 +698,7 @@ Espo.define('crm:views/calendar/calendar', ['view', 'lib!full-calendar'], functi
 
                     if (event.userIdList) {
                         event.userIdList.forEach(function (userId) {
-                            var userName = event.userNameMap[userId] || '';
+                            var userName = this.getHelper().escapeString(event.userNameMap[userId] || '');
                             var avatarHtml = this.getHelper().getAvatarHtml(userId, 'small', 13);
                             if (avatarHtml) avatarHtml += ' ';
 
@@ -739,9 +734,6 @@ Espo.define('crm:views/calendar/calendar', ['view', 'lib!full-calendar'], functi
             var url = 'Activities?from=' + from + '&to=' + to;
             if (this.options.userId) {
                 url += '&userId=' + this.options.userId;
-                if (this.options.userName) {
-                    url += '&userName=' + this.options.userName;
-                }
             }
 
             url += '&scopeList=' + encodeURIComponent(this.enabledScopeList.join(','));

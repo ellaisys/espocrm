@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -72,14 +72,15 @@ abstract class BaseTestCase extends \PHPUnit\Framework\TestCase
         return $this->espoTester->getApplication(true, $clearCache);
     }
 
-    protected function auth($userName, $password = null, $portalId = null)
+    protected function auth($userName, $password = null, $portalId = null, $authenticationMethod = null)
     {
         $this->userName = $userName;
         $this->password = $password;
         $this->portalId = $portalId;
+        $this->authenticationMethod = $authenticationMethod;
 
         if (isset($this->espoTester)) {
-            $this->espoTester->auth($userName, $password, $portalId);
+            $this->espoTester->auth($userName, $password, $portalId, $authenticationMethod);
         }
     }
 
@@ -126,7 +127,7 @@ abstract class BaseTestCase extends \PHPUnit\Framework\TestCase
 
         $this->espoTester = new Tester($params);
         $this->espoTester->initialize();
-        $this->auth($this->userName, $this->password);
+        $this->auth($this->userName, $this->password, null, $this->authenticationMethod);
 
         $this->beforeStartApplication();
         $this->espoApplication = $this->createApplication();

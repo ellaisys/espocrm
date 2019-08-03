@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,25 +31,48 @@ namespace Espo\Core\Utils\Database\Orm\Fields;
 
 class Phone extends Base
 {
-    protected function load($fieldName, $entityName)
+    protected function load($fieldName, $entityType)
     {
-        return array(
-            $entityName => array(
-                'fields' => array(
+        $foreignJoinAlias = "{$fieldName}{$entityType}Foreign";
+        $foreignJoinMiddleAlias = "{$fieldName}{$entityType}ForeignMiddle";
+
+        return [
+            $entityType => [
+                'fields' => [
                     $fieldName => array(
                         'select' => [
                             'sql' => 'phoneNumbers.name',
                             'leftJoins' => [['phoneNumbers', 'phoneNumbers', ['primary' => 1]]],
                         ],
+                        'selectForeign' => [
+                            'sql' => "{$foreignJoinAlias}.name",
+                            'leftJoins' => [
+                                [
+                                    'EntityPhoneNumber',
+                                    $foreignJoinMiddleAlias,
+                                    [
+                                        "{$foreignJoinMiddleAlias}.entityId:" => "{alias}.id",
+                                        "{$foreignJoinMiddleAlias}.primary" => 1,
+                                    ]
+                                ],
+                                [
+                                    'PhoneNumber',
+                                    $foreignJoinAlias,
+                                    [
+                                        "{$foreignJoinAlias}.id:" => "{$foreignJoinMiddleAlias}.phoneNumberId",
+                                    ]
+                                ]
+                            ],
+                        ],
                         'fieldType' => 'phone',
                         'where' =>
                         array (
-                            'LIKE' => \Espo\Core\Utils\Util::toUnderScore($entityName) . ".id IN (
+                            'LIKE' => \Espo\Core\Utils\Util::toUnderScore($entityType) . ".id IN (
                                 SELECT entity_id
                                 FROM entity_phone_number
                                 JOIN phone_number ON phone_number.id = entity_phone_number.phone_number_id
                                 WHERE
-                                    entity_phone_number.deleted = 0 AND entity_phone_number.entity_type = '{$entityName}' AND
+                                    entity_phone_number.deleted = 0 AND entity_phone_number.entity_type = '{$entityType}' AND
                                     phone_number.deleted = 0 AND phone_number.name LIKE {value}
                             )",
                             '=' => array(
@@ -90,18 +113,36 @@ class Phone extends Base
                     ),
                     $fieldName .'Data' => array(
                         'type' => 'text',
-                        'notStorable' => true
+                        'notStorable' => true,
+                        'notExportable' => true,
                     ),
+                    $fieldName .'IsOptedOut' => [
+                        'type' => 'bool',
+                        'notStorable' => true,
+                        'select' => 'phoneNumbers.opt_out',
+                        'where' => [
+                            '= TRUE' => [
+                                'sql' => 'phoneNumbers.opt_out = true AND phoneNumbers.opt_out IS NOT NULL',
+                                'leftJoins' => [['phoneNumbers', 'phoneNumbers', ['primary' => 1]]],
+                            ],
+                            '= FALSE' => [
+                                'sql' => 'phoneNumbers.opt_out = false OR phoneNumbers.opt_out IS NULL',
+                                'leftJoins' => [['phoneNumbers', 'phoneNumbers', ['primary' => 1]]],
+                            ]
+                        ],
+                        'orderBy' => 'phoneNumbers.opt_out {direction}'
+                    ],
                     $fieldName . 'Numeric' => [
                         'type' => 'varchar',
                         'notStorable' => true,
+                        'notExportable' => true,
                         'where' => [
-                            'LIKE' => \Espo\Core\Utils\Util::toUnderScore($entityName) . ".id IN (
+                            'LIKE' => \Espo\Core\Utils\Util::toUnderScore($entityType) . ".id IN (
                                 SELECT entity_id
                                 FROM entity_phone_number
                                 JOIN phone_number ON phone_number.id = entity_phone_number.phone_number_id
                                 WHERE
-                                    entity_phone_number.deleted = 0 AND entity_phone_number.entity_type = '{$entityName}' AND
+                                    entity_phone_number.deleted = 0 AND entity_phone_number.entity_type = '{$entityType}' AND
                                     phone_number.deleted = 0 AND phone_number.numeric LIKE {value}
                             )",
                             '=' => [
@@ -134,9 +175,9 @@ class Phone extends Base
                                 'sql' => 'phoneNumbersNumericMultiple.numeric IS NOT NULL',
                                 'distinct' => true
                             ]
-                        ]
+                        ],
                     ]
-                ),
+                ],
                 'relations' => [
                     'phoneNumbers' => [
                         'type' => 'manyMany',
@@ -147,7 +188,7 @@ class Phone extends Base
                             'phoneNumberId'
                         ],
                         'conditions' => [
-                            'entityType' => $entityName
+                            'entityType' => $entityType
                         ],
                         'additionalColumns' => [
                             'entityType' => [
@@ -161,7 +202,7 @@ class Phone extends Base
                         ]
                     ]
                 ]
-            )
-        );
+            ]
+        ];
     }
 }

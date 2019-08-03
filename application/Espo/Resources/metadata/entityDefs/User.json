@@ -22,6 +22,7 @@
             "default": "regular",
             "maxLength": 24,
             "index": true,
+            "inlineEditDisabled": true,
             "layoutMassUpdateDisabled": true
         },
         "password": {
@@ -139,7 +140,8 @@
         },
         "emailAddress": {
             "type": "email",
-            "required": false
+            "required": false,
+            "layoutMassUpdateDisabled": true
         },
         "phoneNumber": {
             "type": "phone",
@@ -265,10 +267,17 @@
             "type": "datetime",
             "readOnly": true
         },
+        "modifiedAt": {
+            "type": "datetime",
+            "readOnly": true
+        },
         "createdBy": {
             "type": "link",
             "readOnly": true,
             "view": "views/fields/user"
+        },
+        "dashboardTemplate": {
+            "type": "link"
         },
         "lastAccess": {
             "type": "datetime",
@@ -319,6 +328,10 @@
             "entity": "PortalRole",
             "foreign": "users",
             "layoutRelationshipsDisabled": true
+        },
+        "dashboardTemplate": {
+            "type": "belongsTo",
+            "entity": "DashboardTemplate"
         },
         "preferences": {
             "type": "hasOne",

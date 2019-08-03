@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -56,6 +56,8 @@ class Meeting extends \Espo\Services\Record
 
     protected $exportSkipFieldList = ['duration'];
 
+    protected $duplicateIgnoreAttributeList = ['usersColumns', 'contactsColumns', 'leadsColumns'];
+
     protected function getMailSender()
     {
         return $this->getInjection('container')->get('mailSender');
@@ -64,11 +66,6 @@ class Meeting extends \Espo\Services\Record
     protected function getPreferences()
     {
         return $this->getInjection('preferences');
-    }
-
-    protected function getCrypt()
-    {
-        return $this->getInjection('container')->get('crypt');
     }
 
     protected function getLanguage()
@@ -119,14 +116,7 @@ class Meeting extends \Espo\Services\Record
     {
         $smtpParams = null;
         if ($useUserSmtp) {
-            $smtpParams = $this->getPreferences()->getSmtpParams();
-            if ($smtpParams) {
-                if (array_key_exists('password', $smtpParams)) {
-                    $smtpParams['password'] = $this->getCrypt()->decrypt($smtpParams['password']);
-                }
-                $smtpParams['fromAddress'] = $this->getUser()->get('emailAddress');
-                $smtpParams['fromName'] = $this->getUser()->get('name');
-            }
+            $smtpParams = $this->getServiceFactory()->create('Email')->getUserSmtpParams($this->getUser()->id);
         }
 
         $templateFileManager = $this->getInjection('container')->get('templateFileManager');

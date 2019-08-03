@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -97,6 +97,7 @@ Espo.define('views/modals/detail', 'views/modal', function (Dep) {
                     title: this.translate('Previous Entry'),
                     pullLeft: true,
                     className: 'btn-icon',
+                    style: 'text',
                     disabled: true
                 });
                 this.buttonList.push({
@@ -105,6 +106,7 @@ Espo.define('views/modals/detail', 'views/modal', function (Dep) {
                     title: this.translate('Next Entry'),
                     pullLeft: true,
                     className: 'btn-icon',
+                    style: 'text',
                     disabled: true
                 });
                 this.indexOfRecord = this.model.collection.indexOf(this.model);
@@ -119,37 +121,44 @@ Espo.define('views/modals/detail', 'views/modal', function (Dep) {
 
             this.sourceModel = this.model;
 
-            this.getModelFactory().create(this.scope, function (model) {
+            this.getModelFactory().create(this.scope).then(function (model) {
                 if (!this.sourceModel) {
                     this.model = model;
                     this.model.id = this.id;
 
+                    this.setupAfterModelCreated();
+
+                    this.listenTo(this.model, 'sync', this.controlRecordButtonsVisibility, this);
+
                     this.listenToOnce(this.model, 'sync', function () {
                         this.createRecordView();
                     }, this);
-                    this.model.fetch().then(function () {
-                        this.controlRecordButtonsVisibility();
-                    }.bind(this));
+                    this.model.fetch();
                 } else {
                     this.model = this.sourceModel.clone();
                     this.model.collection = this.sourceModel.collection;
+
+                    this.setupAfterModelCreated();
 
                     this.listenTo(this.model, 'change', function () {
                         this.sourceModel.set(this.model.getClonedAttributes());
                     }, this);
 
+                    this.listenTo(this.model, 'sync', this.controlRecordButtonsVisibility, this);
+
                     this.once('after:render', function () {
-                        this.model.fetch().then(function () {
-                        this.controlRecordButtonsVisibility();
-                    }.bind(this));
+                        this.model.fetch();
                     }, this);
                     this.createRecordView();
                 }
-            }, this);
+            }.bind(this));
 
             this.listenToOnce(this.getRouter(), 'routed', function () {
                 this.remove();
             }, this);
+        },
+
+        setupAfterModelCreated: function () {
         },
 
         setupRecordButtons: function () {
@@ -180,7 +189,6 @@ Espo.define('views/modals/detail', 'views/modal', function (Dep) {
             this.addButton({
                 name: 'edit',
                 label: 'Edit',
-                style: 'primary'
             }, true);
         },
 
@@ -189,10 +197,10 @@ Espo.define('views/modals/detail', 'views/modal', function (Dep) {
         },
 
         addRemoveButton: function () {
-            this.addButton({
+            this.addDropdownItem({
                 name: 'remove',
                 label: 'Remove'
-            }, true);
+            });
         },
 
         removeRemoveButton: function () {
@@ -347,10 +355,10 @@ Espo.define('views/modals/detail', 'views/modal', function (Dep) {
                 this.sourceModel.set(this.model.getClonedAttributes());
             }, this);
 
+            this.listenTo(this.model, 'sync', this.controlRecordButtonsVisibility, this);
+
             this.once('after:render', function () {
-                this.model.fetch().then(function () {
-                    this.controlRecordButtonsVisibility();
-                }.bind(this));
+                this.model.fetch();
             }, this);
 
             this.createRecordView(function () {
@@ -397,6 +405,20 @@ Espo.define('views/modals/detail', 'views/modal', function (Dep) {
         },
 
         actionEdit: function () {
+            if (this.options.quickEditDisabled) {
+                var options = {
+                    id: this.id,
+                    model: this.model,
+                    returnUrl: this.getRouter().getCurrentUrl(),
+                };
+                if (this.options.rootUrl) {
+                    options.rootUrl = this.options.rootUrl;
+                }
+                this.getRouter().navigate('#' + this.scope + '/edit/' + this.id, {trigger: false});
+                this.getRouter().dispatch(this.scope, 'edit', options);
+                return;
+            }
+
             var viewName = this.getMetadata().get(['clientDefs', this.scope, 'modalViews', 'edit']) || 'views/modals/edit';
             this.createView('quickEdit', viewName, {
                 scope: this.scope,
@@ -421,6 +443,8 @@ Espo.define('views/modals/detail', 'views/modal', function (Dep) {
                     this.model.set(model.getClonedAttributes());
 
                     this.trigger('after:save', model);
+
+                    this.controlRecordButtonsVisibility();
                 }, this);
 
                 view.render();
@@ -477,4 +501,3 @@ Espo.define('views/modals/detail', 'views/modal', function (Dep) {
         }
     });
 });
-

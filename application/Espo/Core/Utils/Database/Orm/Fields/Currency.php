@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -100,6 +100,8 @@ class Currency extends Base
                     'sql' => $converedFieldName . " {direction}",
                     'leftJoins' => $leftJoins,
                 ],
+                'attributeRole' => 'valueConverted',
+                'fieldType' => 'currency',
             ];
 
             $defs[$entityType]['fields'][$fieldName]['orderBy'] = [
@@ -107,6 +109,12 @@ class Currency extends Base
                 'leftJoins' => $leftJoins,
             ];
         }
+
+        $defs[$entityType]['fields'][$fieldName]['attributeRole'] = 'value';
+        $defs[$entityType]['fields'][$fieldName]['fieldType'] = 'currency';
+
+        $defs[$entityType]['fields'][$fieldName . 'Currency']['attributeRole'] = 'currency';
+        $defs[$entityType]['fields'][$fieldName . 'Currency']['fieldType'] = 'currency';
 
         return $defs;
     }

@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,6 +46,8 @@ Espo.define('views/fields/wysiwyg', ['views/fields/text', 'lib!Summernote'], fun
 
         setup: function () {
             Dep.prototype.setup.call(this);
+
+            this.hasBodyPlainField = !!~this.getFieldManager().getEntityTypeFieldList(this.model.entityType).indexOf(this.name + 'Plain');
 
             if ('height' in this.params) {
                 this.height = this.params.height;
@@ -152,16 +154,23 @@ Espo.define('views/fields/wysiwyg', ['views/fields/text', 'lib!Summernote'], fun
 
         sanitizeHtml: function (value) {
             if (value) {
-                value = value.replace(/<[\/]{0,1}(base)[^><]*>/gi, '');
-                value = value.replace(/<[\/]{0,1}(script)[^><]*>/gi, '');
-                value = value.replace(/<[^><]*(onerror|onclick|onmouseover|onmousedown|onmouseenter|onmouseout|mouseleave|onchange|onblur)=[^><]*>/gi, '');
+                if (!this.htmlPurificationDisabled) {
+                    value = this.getHelper().sanitizeHtml(value);
+                } else {
+                    value = this.sanitizeHtmlLight(value);
+                }
             }
             return value || '';
         },
 
+
+        sanitizeHtmlLight: function (value) {
+           return this.getHelper().moderateSanitizeHtml(value);
+        },
+
         getValueForEdit: function () {
             var value = this.model.get(this.name) || '';
-            return this.sanitizeHtml(value);
+            return this.sanitizeHtmlLight(value);
         },
 
         afterRender: function () {
@@ -446,7 +455,7 @@ Espo.define('views/fields/wysiwyg', ['views/fields/text', 'lib!Summernote'], fun
                 data[this.name] = this.$element.val();
             }
 
-            if (this.model.has('isHtml')) {
+            if (this.model.has('isHtml') && this.hasBodyPlainField) {
             	if (this.model.get('isHtml')) {
             		data[this.name + 'Plain'] = this.htmlToPlain(data[this.name]);
             	} else {

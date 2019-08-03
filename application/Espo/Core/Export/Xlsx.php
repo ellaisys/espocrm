@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -491,7 +491,14 @@ class Xlsx extends \Espo\Core\Injectable
 
                         $sheet->setCellValue("$col$rowNumber", $value);
                     }
-
+                } else if ($type == 'multiEnum' || $type == 'array') {
+                    if (!empty($row[$name])) {
+                        $array = json_decode($row[$name]);
+                        if (is_array($array)) {
+                            $value = implode(', ', $array);
+                            $sheet->setCellValue("$col$rowNumber", $value, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                        }
+                    }
                 } else {
                     if (array_key_exists($name, $row)) {
                         $sheet->setCellValueExplicit("$col$rowNumber", $row[$name], \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);

@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -309,7 +309,7 @@ Espo.define('crm:views/record/panels/activities', ['views/record/panels/relation
                 }
             } else {
                 if (this.model.name == 'Contact') {
-                    if (this.model.get('accountId')) {
+                    if (this.model.get('accountId') && !this.getConfig().get('b2cMode')) {
                         attributes.parentType = 'Account',
                         attributes.parentId = this.model.get('accountId');
                         attributes.parentName = this.model.get('accountName');

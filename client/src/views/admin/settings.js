@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,10 +38,9 @@ Espo.define('views/admin/settings', 'views/settings/record/edit', function (Dep)
             if (this.getHelper().getAppParam('isRestrictedMode') && !this.getUser().isSuperAdmin()) {
                 this.hideField('cronDisabled');
                 this.hideField('maintenanceMode');
-                this.hideField('useWebSocket');
+                this.setFieldReadOnly('useWebSocket');
                 this.setFieldReadOnly('siteUrl');
             }
-
         }
     });
 });

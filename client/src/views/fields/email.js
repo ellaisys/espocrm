@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -55,6 +55,7 @@ Espo.define('views/fields/email', 'views/fields/varchar', function (Dep) {
                 var addressLowerCase = String(address).toLowerCase();
                 if (!re.test(addressLowerCase) && address.indexOf(this.erasedPlaceholder) !== 0) {
                     var msg = this.translate('fieldShouldBeEmail', 'messages').replace('{field}', this.getLabelText());
+                    this.reRender();
                     this.showValidationMessage(msg, 'div.email-address-block:nth-child(' + (i + 1).toString() + ') input');
                     notValid = true;
                     return;
@@ -260,8 +261,8 @@ Espo.define('views/fields/email', 'views/fields/varchar', function (Dep) {
                     autoSelectFirst: true,
                     triggerSelectOnValidInput: false,
                     formatResult: function (suggestion) {
-                        return suggestion.name + ' &#60;' + suggestion.id + '&#62;';
-                    },
+                        return this.getHelper().escapeString(suggestion.name) + ' &#60;' + this.getHelper().escapeString(suggestion.id) + '&#62;';
+                    }.bind(this),
                     transformResult: function (response) {
                         var response = JSON.parse(response);
                         var list = [];

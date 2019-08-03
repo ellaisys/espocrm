@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@
  * these Appropriate Legal Notices must retain the display of the "EspoCRM" word.
  ************************************************************************/
 
-Espo.define('views/fields/multi-enum', ['views/fields/array', 'lib!Selectize'], function (Dep, Selectize) {
+define('views/fields/multi-enum', ['views/fields/array', 'lib!Selectize'], function (Dep, Selectize) {
 
     return Dep.extend({
 
@@ -60,6 +60,48 @@ Espo.define('views/fields/multi-enum', ['views/fields/array', 'lib!Selectize'], 
 
         setup: function () {
             Dep.prototype.setup.call(this);
+
+            if (this.restoreOnBackspace &&  !('restore_on_backspace_espo' in Selectize.plugins)) {
+                this.loadRestoreOnBackspavePlugin();
+            }
+        },
+
+        loadRestoreOnBackspavePlugin: function () {
+
+            Selectize.define('restore_on_backspace_espo', function(options) {
+                var self = this;
+
+                Selectize.restoreOnBackspacePluginLoaded = true;
+
+                options.text = options.text || function(option) {
+                    return option[this.settings.labelField];
+                };
+
+                this.onKeyDown = (function() {
+                    var original = self.onKeyDown;
+                    return function(e) {
+                        var index, option;
+                        if (e.keyCode === 8 && this.$control_input.val() === '' && !this.$activeItems.length) {
+                            index = this.caretPos - 1;
+                            if (index >= 0 && index < this.items.length) {
+                                option = this.options[this.items[index]];
+                                option = {
+                                    value: option.value,
+                                    $order: option.$order,
+                                    label: option.value,
+                                };
+                                if (this.deleteSelection(e)) {
+                                    this.setTextboxValue(options.text.apply(this, [option]));
+                                    this.refreshOptions(true);
+                                }
+                                e.preventDefault();
+                                return;
+                            }
+                        }
+                        return original.apply(this, arguments);
+                    };
+                })();
+            });
         },
 
         afterRender: function () {
@@ -103,6 +145,12 @@ Espo.define('views/fields/multi-enum', ['views/fields/array', 'lib!Selectize'], 
                     });
                 }, this);
 
+                var pluginList = ['remove_button', 'drag_drop'];
+
+                if (this.restoreOnBackspace) {
+                    pluginList.push('restore_on_backspace_espo');
+                }
+
                 var selectizeOptions = {
                     options: data,
                     delimiter: ':,:',
@@ -110,7 +158,7 @@ Espo.define('views/fields/multi-enum', ['views/fields/array', 'lib!Selectize'], 
                     valueField: 'value',
                     highlight: false,
                     searchField: ['label'],
-                    plugins: ['remove_button', 'drag_drop'],
+                    plugins: pluginList,
                     score: function (search) {
                         var score = this.getScoreFunction(search);
                         search = search.toLowerCase();
@@ -160,6 +208,13 @@ Espo.define('views/fields/multi-enum', ['views/fields/array', 'lib!Selectize'], 
                     list[i] = '';
                 }
             }
+
+            if (this.params.isSorted && this.translatedOptions) {
+                list = list.sort(function (v1, v2) {
+                     return (this.translatedOptions[v1] || v1).localeCompare(this.translatedOptions[v2] || v2);
+                }.bind(this));
+            }
+
             var data = {};
             data[this.name] = list;
             return data;

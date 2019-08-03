@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -243,7 +243,7 @@ class Base
         $this->applyLeftJoinsFromWhere($where, $result);
     }
 
-    public function convertWhere(array $where, bool $ignoreAdditionaFilterTypes = false, array &$result = null) : array
+    public function convertWhere(array $where, bool $ignoreAdditionaFilterTypes = false, array &$result = []) : array
     {
         $whereClause = [];
 
@@ -807,7 +807,7 @@ class Base
         return $result;
     }
 
-    protected function checkWhere(array $where, bool $checkWherePermission = true, bool $forbidComplexExpressions = true)
+    public function checkWhere(array $where, bool $checkWherePermission = true, bool $forbidComplexExpressions = false)
     {
         foreach ($where as $w) {
             $attribute = null;
@@ -823,7 +823,11 @@ class Base
                 $type = $w['type'];
             }
 
-            $entityType = $this->getEntityType();
+            if ($forbidComplexExpressions) {
+                if ($type && in_array($type, ['subQueryIn', 'subQueryNotIn', 'not'])) {
+                    throw new Forbidden("SelectManager::checkWhere: Sub-queries are forbidden.");
+                }
+            }
 
             if ($attribute && $forbidComplexExpressions) {
                 if (strpos($attribute, '.') !== false || strpos($attribute, ':')) {
@@ -832,40 +836,51 @@ class Base
             }
 
             if ($attribute && $checkWherePermission) {
-                if (strpos($attribute, '.')) {
-                    list($link, $attribute) = explode('.', $attribute);
-                    if (!$this->getSeed()->hasRelation($link)) {
-                        throw new Forbidden("SelectManager::checkWhere: Unknow relation '{$link}' in where.");
-                    }
-                    $entityType = $this->getSeed($this->getEntityType())->getRelationParam($link, 'entity');
-                    if (!$entityType) {
-                        throw new Forbidden("SelectManager::checkWhere: Bad relation.");
-                    }
-                    if (!$this->getAcl()->checkScope($entityType)) {
-                        throw new Forbidden();
-                    }
-                }
-
-                if ($type && in_array($type, ['isLinked', 'isNotLinked', 'linkedWith', 'notLinkedWith', 'isUserFromTeams'])) {
-                    if (in_array($attribute, $this->getAcl()->getScopeForbiddenFieldList($entityType))) {
-                        throw new Forbidden();
-                    }
-                    if (
-                        $this->getSeed()->hasRelation($attribute)
-                        &&
-                        in_array($attribute, $this->getAcl()->getScopeForbiddenLinkList($entityType))
-                    ) {
-                        throw new Forbidden();
-                    }
-                } else {
-                    if (in_array($attribute, $this->getAcl()->getScopeForbiddenAttributeList($entityType))) {
-                        throw new Forbidden();
-                    }
+                $argumentList = \Espo\ORM\DB\Query\Base::getAllAttributesFromComplexExpression($attribute);
+                foreach ($argumentList as $argument) {
+                    $this->checkWhereArgument($argument, $type);
                 }
             }
 
             if (!empty($w['value']) && is_array($w['value'])) {
                 $this->checkWhere($w['value'], $checkWherePermission, $forbidComplexExpressions);
+            }
+        }
+    }
+
+    protected function checkWhereArgument($attribute, $type)
+    {
+        $entityType = $this->getEntityType();
+
+        if (strpos($attribute, '.')) {
+            list($link, $attribute) = explode('.', $attribute);
+            if (!$this->getSeed()->hasRelation($link)) {
+                // TODO allow alias
+                throw new Forbidden("SelectManager::checkWhere: Unknown relation '{$link}' in where.");
+            }
+            $entityType = $this->getSeed($this->getEntityType())->getRelationParam($link, 'entity');
+            if (!$entityType) {
+                throw new Forbidden("SelectManager::checkWhere: Bad relation.");
+            }
+            if (!$this->getAcl()->checkScope($entityType)) {
+                throw new Forbidden();
+            }
+        }
+
+        if ($type && in_array($type, ['isLinked', 'isNotLinked', 'linkedWith', 'notLinkedWith', 'isUserFromTeams'])) {
+            if (in_array($attribute, $this->getAcl()->getScopeForbiddenFieldList($entityType))) {
+                throw new Forbidden();
+            }
+            if (
+                $this->getSeed()->hasRelation($attribute)
+                &&
+                in_array($attribute, $this->getAcl()->getScopeForbiddenLinkList($entityType))
+            ) {
+                throw new Forbidden();
+            }
+        } else {
+            if (in_array($attribute, $this->getAcl()->getScopeForbiddenAttributeList($entityType))) {
+                throw new Forbidden();
             }
         }
     }
@@ -1023,7 +1038,8 @@ class Base
                 $where['type'] = 'between';
                 $dt = new \DateTime($value, new \DateTimeZone($timeZone));
                 $dtTo = clone $dt;
-                $dtTo->modify('+1 day -1 second');
+                if (strlen($value) <= 10)
+                    $dtTo->modify('+1 day -1 second');
                 $dt->setTimezone(new \DateTimeZone('UTC'));
                 $dtTo->setTimezone(new \DateTimeZone('UTC'));
                 $from = $dt->format($format);
@@ -1039,7 +1055,9 @@ class Base
             case 'after':
                 $where['type'] = 'after';
                 $dt = new \DateTime($value, new \DateTimeZone($timeZone));
-                $dt->modify('+1 day -1 second');
+                if (strlen($value) <= 10)
+                    $dt->modify('+1 day -1 second');
+
                 $dt->setTimezone(new \DateTimeZone('UTC'));
                 $where['value'] = $dt->format($format);
                 break;
@@ -1053,7 +1071,8 @@ class Base
 
                     $dt = new \DateTime($value[1], new \DateTimeZone($timeZone));
                     $dt->setTimezone(new \DateTimeZone('UTC'));
-                    $dt->modify('-1 second');
+                    if (strlen($value[1]) <= 10)
+                        $dt->modify('+1 day -1 second');
                     $to = $dt->format($format);
 
                     $where['value'] = [$from, $to];
@@ -1199,7 +1218,7 @@ class Base
         return $result;
     }
 
-    protected function getWherePart($item, array &$result = null)
+    protected function getWherePart($item, array &$result = [])
     {
         $part = [];
 
@@ -1246,19 +1265,54 @@ class Base
             switch ($type) {
                 case 'or':
                 case 'and':
-                case 'not':
-                    if (is_array($value)) {
-                        $arr = [];
-                        foreach ($value as $i) {
-                            $a = $this->getWherePart($i, $result);
-                            foreach ($a as $left => $right) {
-                                if (!empty($right) || is_null($right) || $right === '' || $right === 0 || $right === false) {
-                                    $arr[] = [$left => $right];
-                                }
+                    if (!is_array($value)) break;
+
+                    $sqWhereClause = [];
+                    foreach ($value as $sqWhereItem) {
+                        $sqWherePart = $this->getWherePart($sqWhereItem, $result);
+                        foreach ($sqWherePart as $left => $right) {
+                            if (!empty($right) || is_null($right) || $right === '' || $right === 0 || $right === false) {
+                                $sqWhereClause[] = [$left => $right];
                             }
                         }
-                        $part[strtoupper($type)] = $arr;
                     }
+                    $part[strtoupper($type)] = $sqWhereClause;
+
+                    break;
+
+                case 'not':
+                case 'subQueryNotIn':
+                case 'subQueryIn':
+                    if (!is_array($value)) break;
+
+                    $sqWhereClause = [];
+                    $sqResult = $this->getEmptySelectParams();
+                    foreach ($value as $sqWhereItem) {
+                        $sqWherePart = $this->getWherePart($sqWhereItem, $sqResult);
+                        foreach ($sqWherePart as $left => $right) {
+                            if (!empty($right) || is_null($right) || $right === '' || $right === 0 || $right === false) {
+                                $sqWhereClause[] = [$left => $right];
+                            }
+                        }
+                    }
+
+                    $this->applyLeftJoinsFromWhere($value, $sqResult);
+                    $key = $type === 'subQueryIn' ? 'id=s' : 'id!=s';
+                    $part[$key] = [
+                        'selectParams' =>  [
+                            'select' => ['id'],
+                            'whereClause' => $sqWhereClause,
+                            'leftJoins' => $sqResult['leftJoins'] ?? [],
+                            'joins' => $sqResult['joins'] ?? [],
+                        ]
+                    ];
+
+                    break;
+
+                case 'expression':
+                    $key = $attribute;
+                    if (substr($key, -1) !== ':') $key .= ':';
+                    $part[$key] = null;
                     break;
 
                 case 'like':
@@ -1790,6 +1844,35 @@ class Base
         return false;
     }
 
+    public function hasLinkJoined($join, array &$result)
+    {
+        if (in_array($join, $result['joins'])) {
+            return true;
+        }
+
+        foreach ($result['joins'] as $item) {
+            if (is_array($item) && count($item) > 1) {
+                if ($item[0] == $join) {
+                    return true;
+                }
+            }
+        }
+
+        if (in_array($join, $result['leftJoins'])) {
+            return true;
+        }
+
+        foreach ($result['leftJoins'] as $item) {
+            if (is_array($item) && count($item) > 1) {
+                if ($item[0] == $join) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     public function addJoin($join, array &$result)
     {
         if (empty($result['joins'])) {
@@ -1915,7 +1998,7 @@ class Base
 
         if ($useFullTextSearch) {
             foreach ($fieldList as $field) {
-                if (strpos($item, '.') !== false) {
+                if (strpos($field, '.') !== false) {
                     continue;
                 }
 
@@ -2283,7 +2366,7 @@ class Base
         return $selectParams1;
     }
 
-    protected function applyLeftJoinsFromWhere($where, array &$result)
+    public function applyLeftJoinsFromWhere($where, array &$result)
     {
         if (!is_array($where)) return;
 
@@ -2292,21 +2375,49 @@ class Base
         }
     }
 
-    protected function applyLeftJoinsFromWhereItem($item, array &$result)
+    public function applyLeftJoinsFromWhereItem($item, array &$result)
     {
-        if (!empty($item['type'])) {
-            if (in_array($item['type'], ['or', 'and', 'not', 'having'])) {
-                if (!array_key_exists('value', $item) || !is_array($item['value'])) return;
-                foreach ($item['value'] as $listItem) {
+        $type = $item['type'] ?? null;
+
+        if ($type) {
+            if (in_array($type, ['subQueryNotIn', 'subQueryIn', 'not'])) return;
+
+            if (in_array($type, ['or', 'and', 'having'])) {
+                $value = $item['value'] ?? null;
+                if (!is_array($value)) return;
+                foreach ($value as $listItem) {
                     $this->applyLeftJoinsFromWhereItem($listItem, $result);
                 }
                 return;
             }
         }
 
-        $attribute = null;
-        if (!empty($item['attribute'])) $attribute = $item['attribute'];
+        $attribute = $item['attribute'] ?? null;
         if (!$attribute) return;
+
+        $this->applyLeftJoinsFromAttribute($attribute, $result);
+    }
+
+    protected function applyLeftJoinsFromAttribute(string $attribute, array &$result)
+    {
+        if (strpos($attribute, ':') !== false) {
+            $argumentList = \Espo\ORM\DB\Query\Base::getAllAttributesFromComplexExpression($attribute);
+            foreach ($argumentList as $argument) {
+                $this->applyLeftJoinsFromAttribute($argument, $result);
+            }
+            return;
+        }
+
+        if (strpos($attribute, '.') !== false) {
+            list($link, $attribute) = explode('.', $attribute);
+            if ($this->getSeed()->hasRelation($link) && !$this->hasLeftJoin($link, $result)) {
+                $this->addLeftJoin($link, $result);
+                if ($this->getSeed()->getRelationType($link) === \Espo\ORM\Entity::HAS_MANY) {
+                    $result['distinct'] = true;
+                }
+            }
+            return;
+        }
 
         $attributeType = $this->getSeed()->getAttributeType($attribute);
         if ($attributeType === 'foreign') {

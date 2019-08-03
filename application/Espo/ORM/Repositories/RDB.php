@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -204,9 +204,15 @@ class RDB extends \Espo\ORM\Repository
             $this->handleSelectParams($params);
         }
 
-        $dataArr = $this->getMapper()->select($this->seed, $params);
+        $selectResult = $this->getMapper()->select($this->seed, $params);
 
-        $collection = new EntityCollection($dataArr, $this->entityType, $this->entityFactory);
+        if (!empty($params['returnSthCollection'])) {
+            $collection = $selectResult;
+        } else {
+            $dataList = $selectResult;
+            $collection = new EntityCollection($dataList, $this->entityType, $this->entityFactory);
+        }
+
         $collection->setAsFetched();
 
         $this->reset();

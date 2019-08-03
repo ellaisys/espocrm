@@ -32,14 +32,6 @@
                             "attribute": "subscribeToTargetList"
                         }
                     ]
-                },
-                "required": {
-                    "conditionGroup": [
-                        {
-                            "type": "isTrue",
-                            "attribute": "subscribeToTargetList"
-                        }
-                    ]
                 }
             },
             "optInConfirmationLifetime": {
@@ -61,6 +53,16 @@
                 }
             },
             "optInConfirmationSuccessMessage": {
+                "visible": {
+                    "conditionGroup": [
+                        {
+                            "type": "isTrue",
+                            "attribute": "optInConfirmation"
+                        }
+                    ]
+                }
+            },
+            "createLeadBeforeOptInConfirmation": {
                 "visible": {
                     "conditionGroup": [
                         {
@@ -112,7 +114,7 @@
     },
     "relationshipPanels": {
         "logRecords": {
-            "rowActionsView": "views/record/row-actions/remove-only",
+            "rowActionsView": "views/record/row-actions/view-and-remove",
             "layout": "listForLeadCapture",
             "select": false,
             "create": false

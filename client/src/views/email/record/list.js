@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -51,15 +51,6 @@ Espo.define('views/email/record/list', 'views/record/list', function (Dep) {
             this.addMassAction('markAsNotRead', false, true);
             this.addMassAction('markAsRead', false, true);
             this.addMassAction('moveToTrash', false, true);
-
-            /*this.massActionList.push('moveToTrash');
-
-            this.massActionList.push('markAsRead');
-            this.massActionList.push('markAsNotRead');
-            this.massActionList.push('markAsImportant');
-            this.massActionList.push('markAsNotImportant');
-            this.massActionList.push('moveToFolder');
-            this.massActionList.push('retrieveFromTrash');*/
 
             this.listenTo(this.collection, 'moving-to-trash', function (id) {
                 var model = this.collection.get(id);

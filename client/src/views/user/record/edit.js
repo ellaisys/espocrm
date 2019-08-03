@@ -2,8 +2,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -115,6 +115,15 @@ Espo.define('views/user/record/edit', ['views/record/edit', 'views/user/record/d
                         [{"name":"portalRoles"}, {"name":"accounts"}]
                     ]
                 });
+                if (this.getUser().isAdmin() && this.model.isPortal()) {
+                    layout.push({
+                        "label": "Misc",
+                        "name": "portalMisc",
+                        "rows": [
+                            [{"name":"dashboardTemplate"}, false]
+                        ]
+                    });
+                }
 
                 if (this.type == 'edit' && this.getUser().isAdmin() && !this.model.isApi()) {
                     layout.push({

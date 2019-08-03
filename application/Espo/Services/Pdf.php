@@ -3,8 +3,8 @@
  * This file is part of EspoCRM.
  *
  * EspoCRM - Open Source CRM application.
- * Copyright (C) 2014-2018 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
- * Website: http://www.espocrm.com
+ * Copyright (C) 2014-2019 Yuri Kuznetsov, Taras Machyshyn, Oleksiy Avramenko
+ * Website: https://www.espocrm.com
  *
  * EspoCRM is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -109,6 +109,9 @@ class Pdf extends \Espo\Core\Services\Base
         if ($template->get('pageFormat')) {
             $pageFormat = $template->get('pageFormat');
         }
+        if ($pageFormat === 'Custom') {
+            $pageFormat = [$template->get('pageWidth'), $template->get('pageHeight')];
+        }
         $pageOrientationCode = 'P';
         if ($pageOrientation === 'Landscape') {
             $pageOrientationCode = 'L';
@@ -129,7 +132,11 @@ class Pdf extends \Espo\Core\Services\Base
         $pdf = new \Espo\Core\Pdf\Tcpdf();
         $pdf->setUseGroupNumbers(true);
 
-        $service = $this->getServiceFactory()->create($entityType);
+        if ($this->getServiceFactory()->checkExists($entityType)) {
+            $service = $this->getServiceFactory()->create($entityType);
+        } else {
+            $service = $this->getServiceFactory()->create('Record');
+        }
 
         foreach ($entityList as $entity) {
             $service->loadAdditionalFields($entity);
@@ -162,7 +169,11 @@ class Pdf extends \Espo\Core\Services\Base
 
     public function massGenerate($entityType, $idList, $templateId, $checkAcl = false)
     {
-        $service = $this->getServiceFactory()->create($entityType);
+        if ($this->getServiceFactory()->checkExists($entityType)) {
+            $service = $this->getServiceFactory()->create($entityType);
+        } else {
+            $service = $this->getServiceFactory()->create('Record');
+        }
 
         $maxCount = $this->getConfig()->get('massPrintPdfMaxCount');
         if ($maxCount) {
@@ -249,7 +260,13 @@ class Pdf extends \Espo\Core\Services\Base
     public function buildFromTemplate(Entity $entity, Entity $template, $displayInline = false)
     {
         $entityType = $entity->getEntityType();
-        $service = $this->getServiceFactory()->create($entityType);
+
+        if ($this->getServiceFactory()->checkExists($entityType)) {
+            $service = $this->getServiceFactory()->create($entityType);
+        } else {
+            $service = $this->getServiceFactory()->create('Record');
+        }
+
         $service->loadAdditionalFields($entity);
 
         if (method_exists($service, 'loadAdditionalFieldsForPdf')) {
